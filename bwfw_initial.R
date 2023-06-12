@@ -139,20 +139,28 @@ weirdo_points <- semi_join(bwfw_anom2, weirdo_whales)
 weirdo_whaletracks <- semi_join(bwfw_calculations,weirdo_whales)
 weirdo_whaletracks$anom <- 0
 
+# Data points for weirdo whales
 weirdo_whaletracks <- full_join(bwfw_calculations,weirdo_whales)
 
-
 # Setting anomalous points to 1
-if (weirdo_whaletracks == weirdo_points) {
-  weirdo_whaletracks$anom = 1
+for (i in seq_along(weirdo_points$feature_id)) {
+  index <- which(weirdo_whaletracks$feature_id == weirdo_points$feature_id[[i]])
+  weirdo_whaletracks$anom[[index]] <- 1
 }
 
+non_anomalous <- filter(weirdo_whaletracks,"anom"==0)
+anomalous <- filter(weirdo_whaletracks,"anom"==1)
 # Plot anomalous tracks with anomalous points in different color
 plot(wrld_simpl, xlim=c(-120,-80), ylim=c(0,60), axes=TRUE, col="light yellow")
 coordinates(weirdo_whaletracks) = ~lon+lat
-points(weirdo_whaletracks, pch=16, col=anom, cex=0.5)
+points(filter(weirdo_whaletracks,"anom"==0), col='red', pch=16, cex=0.5)
 
 ######
+
+
+
+
+
 
 
 find_anomalies2 <- function(df,speed) {
@@ -170,7 +178,7 @@ find_anomalies2 <- function(df,speed) {
   residual <- bwfw_timedist$dist_error - bwfw_timedist$timestep*max_speed
   bwfw_residual <- cbind(bwfw_timedist,residual)
   
-  # Find anomalous points
+# Find anomalous points
   anomalies <- filter(bwfw_residual, residual > 0)
   anomaly_points <- semi_join(bwfw_residual,anomalies)
   output <- anomaly_points

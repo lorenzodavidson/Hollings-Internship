@@ -25,23 +25,6 @@ suppressPackageStartupMessages(suppressWarnings({
   #library(RgoogleMaps)
 }))
 
-install.packages("rgdal")
-install.packages("raster")
-install.packages("dismo")
-install.packages("adehabitatLT")
-install.packages("maps")
-install.packages("mapdata")
-install.packages("maptools")
-install.packages("mgcv")
-install.packages("ape")
-install.packages("ncf")
-install.packages("ncdf4")
-install.packages("spdep")
-install.packages("ROCR")
-install.packages("gbm")
-install.packages("tidyverse")
-install.packages("viridis")
-
 
 # Data Preparation --------------------------------------------------------
 library(dismo)
