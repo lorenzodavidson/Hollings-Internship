@@ -1,5 +1,32 @@
-library(anytime)
-
+# Libraries ---------------------------------------------------------------
+suppressPackageStartupMessages(suppressWarnings({
+  #library(devtools)
+  #devtools::install_github("rspatial/dismo")
+  library(sp)
+  library(rgdal)
+  library(raster)
+  library(dismo)
+  library(adehabitatLT) # help(package='adehabitat') # help.search('angle',package='adehabitat')
+  library(maps)       # for map.where
+  library(mapdata)    # for worldHires
+  library(sf)
+  library(maptools)
+  library(mgcv)
+  library(ape)
+  library(ncf)
+  library(ncdf4)
+  library(spdep)
+  library(ROCR)
+  library(gbm)
+  library(tidyverse)
+  library(viridis)
+  #library(rJava)
+  #library(ggmap)
+  #library(RgoogleMaps)
+  library(ggplot2)
+  library(geosphere)
+  library(anytime)
+}))
 
 # Creating monthly blwh, krill, and bwkr files --------------------------------
 
@@ -62,7 +89,7 @@ for (t in seq_along(time)) {
 }
 
 # Save all 5 datasets as csv or raster files
-fpath_bwkr <- "~/Dropbox/blwh_sst_monthly/blwh_krill/"
+fpath_bwkr <- "~/Dropbox/blwh_sst_monthly/blwh_krill/bwkr_monthly"
 fpath_blwh <- "~/Dropbox/blwh_sst_monthly/blwh_krill/blwh_monthly"
 fpath_krill <- "~/Dropbox/blwh_sst_monthly/blwh_krill/krill_monthly"
 for (i in seq_along(years)) {
@@ -80,6 +107,8 @@ for (i in seq_along(years)) {
     writeRaster(krill_monthly_raster[[x]],paste0(fpath_krill,"/",krill_name,".grd"),format = "raster")
   }
 }
+
+
 
 
 
@@ -146,20 +175,50 @@ krill_wtf <- krill_t1test %>%
 
 blwh_t1[[1,1]]
 
-# Opening whale and krill data into year files --------------------------------------------
-fpath <- "~/Dropbox/blwh_sst_monthly/blwh/" 
-dfnames <- list.files(fpath)
+# Opening whale and krill data --------------------------------------------
+fpath_blwh <- "~/Dropbox/blwh_sst_monthly/blwh_krill/blwh_monthly"
+fpath_krill <- "~/Dropbox/blwh_sst_monthly/blwh_krill/krill_monthly"
+fpath_bwkr <- "~/Dropbox/blwh_sst_monthly/blwh_krill/bwkr_monthly"
+
+dfnames_bwkr <- list.files(fpath_bwkr)
+dfnames_blwh <- list.files(fpath_blwh)
+dfnames_krill <- list.files(fpath_krill)
+
 blwh_monthly_raster <- list()
-for(i in dfnames[stringr::str_detect(dfnames, ".grd")]){
-  tt <- raster(paste0(fpath,"/",i))
-  blwh_monthly[[i]] <- tt
+for(i in dfnames_blwh[stringr::str_detect(dfnames_blwh, ".grd")]){
+  tt <- raster(paste0(fpath_blwh,"/",i))
+  blwh_monthly_raster[[i]] <- tt
+}
+
+krill_monthly_raster <- list()
+for(i in dfnames_krill[stringr::str_detect(dfnames_krill, ".grd")]){
+  tt <- raster(paste0(fpath_krill,"/",i))
+  krill_monthly_raster[[i]] <- tt
+}
+
+blwh_monthly_xyz <- list()
+for(i in dfnames_blwh[stringr::str_detect(dfnames_blwh, ".csv")]){
+  tt <- read.csv(paste0(fpath_blwh,"/",i))
+  blwh_monthly_xyz[[i]] <- tt
+}
+
+krill_monthly_xyz <- list()
+for(i in dfnames_krill[stringr::str_detect(dfnames_krill, ".csv")]){
+  tt <- read.csv(paste0(fpath_krill,"/",i))
+  krill_monthly_xyz[[i]] <- tt
+}
+
+bwkr_monthly <- list()
+for(i in dfnames_bwkr[stringr::str_detect(dfnames_bwkr, ".csv")]){
+  tt <- read.csv(paste0(fpath_bwkr,"/",i))
+  bwkr_monthly[[i]] <- tt
 }
 
 
+# Overlap Metrics Code ----------------------------------------------------
 
-krill_t1 <- TotalKrill_CPUE[,,1]
-krill_t1_transpose <- t(krill_t1)
-krill_t1_rasterprep <- matrix(NA,33300,3)
+
+
 
 
 
