@@ -1,61 +1,40 @@
 library(anytime)
 
 
-# Creating Yearly Whale+Krill Files ---------------------------------------
+# Creating monthly blwh, krill, and bwkr files --------------------------------
 
-
-file_names <- c()
-
+# Open whale grd files for months of interest into xyz and raster format
 fpath <- "~/Dropbox/blwh_sst_monthly/blwh/"
+dfnames <- list.files(fpath)
 dfnames <- list.files(fpath)[stringr::str_detect(dfnames,".grd")]
 
+months <- c("03","04","05","06","07")
 keywords1 <- c("_03_","_04_","_05_","_06_","_07_")
 years <- c(1990:2020)
 keywords2 <- as.character(years)
-# Filter for years and months
-dfnames <- dfnames[Reduce("|", lapply(keywords1, function(x) grepl(x, dfnames)))]
+
+dfnames <- dfnames[Reduce("|", lapply(keywords1, function(x) grepl(x, dfnames)))] # Filter for years and months
 dfnames <- dfnames[Reduce("|", lapply(keywords2, function(x) grepl(x, dfnames)))]
 
-# Create a list for each year containing dataframes for each of the 5 months
-for(i in dfnames[stringr::str_detect(dfnames, ".grd")]){
-  tt <- raster(paste0(fpath,"/",i))
-  
-  blwh_monthly[[i]] <- tt
+blwh_monthly_xyz <- list()
+blwh_monthly_raster <- list()
+for (i in dfnames) {
+  raster <- raster(paste0(fpath,"/",i))
+  blwh_monthly_raster[[i]] <- raster
+  xyz <- data.frame(rasterToPoints(blwh_monthly_raster[[i]])) %>%
+    rename("blwh" = "layer")
+  blwh_monthly_xyz[[i]] <- xyz
 }
 
-cl
-blwh_t1 <- data.frame(rasterToPoints(blwh_monthly[[1]]))
-krill_t1test <- data.frame(rasterToPoints(krill_monthly[[1]]))
-
-blwh_t1test <- inner_join(blwh_t1,krill_t1test, by = c("x", y))
-
-krill_wtf <- krill_t1test %>%
-  filter(x == -127.05 | y == 47.95)
-
-blwh_t1[[1,1]]
-
-# Opening whale and krill data into year files --------------------------------------------
-fpath <- "~/Dropbox/blwh_sst_monthly/blwh/" 
-dfnames <- list.files(fpath)
-blwh_monthly<- list()
-for(i in dfnames[stringr::str_detect(dfnames, ".grd")]){
-  tt <- raster(paste0(fpath,"/",i))
-  blwh_monthly[[i]] <- tt
-}
-
+# Open krill files and turn into xyz and raster format
 totalkrill <- nc_open('TotalKril_CPUE.nc')
-lon <- ncvar_get(totalkrill, "Longitude")
-lat <- ncvar_get(totalkrill, "Latitude")
+lon <- round(ncvar_get(totalkrill, "Longitude"),digits = 2)
+lat <- round(ncvar_get(totalkrill, "Latitude"),digits = 2)
 time <- anytime(ncvar_get(totalkrill, "Time"))
 TotalKrill_CPUE <- ncvar_get(totalkrill, "TotalKrill_CPUE")
 
-krill_t1 <- TotalKrill_CPUE[,,1]
-krill_t1_transpose <- t(krill_t1)
-krill_t1_rasterprep <- matrix(NA,33300,3)
-
-
-krill_monthly_long<- list()
-krill_monthly_raster<- list()
+krill_monthly_xyz <- list()
+krill_monthly_raster <- list()
 for (t in seq_along(time)) {
   for (i in seq_along(lon)) {
     for (j in seq_along(lat)) {
@@ -67,14 +46,127 @@ for (t in seq_along(time)) {
       }
     }
   }
-  krill_monthly_long[[t]]<-krill_rasterprep
+  krill_monthly_xyz[[t]] <- data.frame(na.omit(krill_rasterprep)) %>%
+    rename("x" = "X1") %>%
+    rename("y" = "X2") %>%
+    rename("krill" = "X3")
   #krill_raster <- rasterFromXYZ(krill_rasterprep,crs=CRS("+proj=longlat +datum=WGS84 +ellps=WGS84 +towgs84=0,0,0"))
   #krill_monthly_raster[[t]] <- krill_raster
 }
 
+# Creating bwkr dataset
+bwkr_monthly <- list()
+for (t in seq_along(time)) {
+  bwkr_monthly[[t]] <- inner_join(blwh_monthly_xyz[[t]],krill_monthly_xyz[[t]]) %>%
+    rename("blwh" = "layer")
+}
+
+# Save all 5 datasets as csv or raster files
+fpath_bwkr <- "~/Dropbox/blwh_sst_monthly/blwh_krill/"
+fpath_blwh <- "~/Dropbox/blwh_sst_monthly/blwh_krill/blwh_monthly"
+fpath_krill <- "~/Dropbox/blwh_sst_monthly/blwh_krill/krill_monthly"
+for (i in seq_along(years)) {
+  for (j in seq_along(months)) {
+    x <- i*5 - 5 + j
+    bwkr_name <- paste0("bwkr_", years[[i]], "_", months[[j]],".csv") # Need to figure out
+    write.csv(bwkr_monthly[[x]],paste0(fpath_bwkr,"/",bwkr_name),row.names = FALSE)
+    
+    blwh_name <- paste0("blwh_", years[[i]], "_", months[[j]])
+    write.csv(blwh_monthly_xyz[[x]],paste0(fpath_blwh,"/",blwh_name,".csv"),row.names = FALSE)
+    writeRaster(blwh_monthly_raster[[x]],paste0(fpath_blwh,"/",blwh_name,".grd"),format = "raster") # Figure out how to save rasters
+    
+    krill_name <- paste0("krill_", years[[i]], "_", months[[j]])
+    write.csv(krill_monthly_xyz[[x]],paste0(fpath_krill,"/",krill_name,".csv"),row.names = FALSE)
+    writeRaster(krill_monthly_raster[[x]],paste0(fpath_krill,"/",krill_name,".grd"),format = "raster")
+  }
+}
+
+
+
+# Trying out with 1 df at a time
+blwh_t1 <- data.frame(rasterToPoints(blwh_monthly_long[[1]]))
+krill_t1 <- data.frame(krill_monthly_long[[1]])
+krill_t1na <- data.frame(na.omit(krill_monthly_long[[1]])) %>%
+  rename("x" = "X1") %>%
+  rename("y" = "X2") %>%
+  rename("krill" = "X3")
+
+blkr_t1test <- inner_join(blwh_t1,krill_t1na)
+
+
+blwh_t1 <- blwh_monthly_xyz[[1]]
+krill_t1 <- krill_monthly_xyz[[1]]
+
+write.csv(krill_t1na, "~/Desktop/Hollingsinternship/Code/Hollings-Internship/krill_t1.csv", row.names = FALSE)
+write.csv(blwh_t1, "~/Desktop/Hollingsinternship/Code/Hollings-Internship/blwh_t1.csv", row.names = FALSE)
+
+krill_t1$x %>%
+  round(digits = 2)
+
+round(krill_t1$y, digits = 2)
+
+write.csv(krill_t1, "~/Desktop/Hollingsinternship/Code/Hollings-Internship/krill_t1.csv", row.names = FALSE)
+
+filter(krill_t1,y==39.95)
+
+for (i in seq_along(lon)) {
+  for (j in seq_along(lat)) {
+    if (i == 1 & j == 1) {
+      krill_rasterprep <- c(lon[[i]],lat[[j]],TotalKrill_CPUE[[i,j,1]])
+    } else {
+      new_row <- c(lon[[i]],lat[[j]],TotalKrill_CPUE[[i,j,1]])
+      krill_rasterprep <- rbind(krill_rasterprep, new_row)
+    }
+  }
+}
+krill_t1na <- data.frame(na.omit(krill_rasterprep))
+  
+krill_raster <- rasterFromXYZ(krill_rasterprep)
+krill_t1test <- data.frame(rasterToPoints(krill_raster))
+
+head(filter(krill_t1test,y==39.95))
+
+
+
+
+
+
+
+
+
+
+
+blwh_t1 <- data.frame(rasterToPoints(blwh_monthly[[1]]))
+krill_t1 <- data.frame(rasterToPoints(krill_monthly[[1]]))
+
+
+
+krill_wtf <- krill_t1test %>%
+  filter(x == -127.05 | y == 47.95)
+
+blwh_t1[[1,1]]
+
+# Opening whale and krill data into year files --------------------------------------------
+fpath <- "~/Dropbox/blwh_sst_monthly/blwh/" 
+dfnames <- list.files(fpath)
+blwh_monthly_raster <- list()
+for(i in dfnames[stringr::str_detect(dfnames, ".grd")]){
+  tt <- raster(paste0(fpath,"/",i))
+  blwh_monthly[[i]] <- tt
+}
+
+
+
+krill_t1 <- TotalKrill_CPUE[,,1]
+krill_t1_transpose <- t(krill_t1)
+krill_t1_rasterprep <- matrix(NA,33300,3)
+
+
+
+
 writeRaster(krill_monthly, "~/Desktop/Hollingsinternship/Code/Hollings-Internship/krill_monthly.nc", format="CDF")
 
-write.csv(krill_monthly, "~/Desktop/Hollingsinternship/Code/Hollings-Internship/krill_t1.csv", row.names = FALSE)
+write.csv(krill_monthly_long, "~/Desktop/Hollingsinternship/Code/Hollings-Internship/krill_monthly_long.csv", row.names = FALSE)
 
 
 krill_t1_rasterprep1 <- c(lon[[1]],lat[[1]],krill_t1[[1,1]])
