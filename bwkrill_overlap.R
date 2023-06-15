@@ -108,73 +108,6 @@ for (i in seq_along(years)) {
   }
 }
 
-
-
-
-
-# Trying out with 1 df at a time
-blwh_t1 <- data.frame(rasterToPoints(blwh_monthly_long[[1]]))
-krill_t1 <- data.frame(krill_monthly_long[[1]])
-krill_t1na <- data.frame(na.omit(krill_monthly_long[[1]])) %>%
-  rename("x" = "X1") %>%
-  rename("y" = "X2") %>%
-  rename("krill" = "X3")
-
-blkr_t1test <- inner_join(blwh_t1,krill_t1na)
-
-
-blwh_t1 <- blwh_monthly_xyz[[1]]
-krill_t1 <- krill_monthly_xyz[[1]]
-
-write.csv(krill_t1na, "~/Desktop/Hollingsinternship/Code/Hollings-Internship/krill_t1.csv", row.names = FALSE)
-write.csv(blwh_t1, "~/Desktop/Hollingsinternship/Code/Hollings-Internship/blwh_t1.csv", row.names = FALSE)
-
-krill_t1$x %>%
-  round(digits = 2)
-
-round(krill_t1$y, digits = 2)
-
-write.csv(krill_t1, "~/Desktop/Hollingsinternship/Code/Hollings-Internship/krill_t1.csv", row.names = FALSE)
-
-filter(krill_t1,y==39.95)
-
-for (i in seq_along(lon)) {
-  for (j in seq_along(lat)) {
-    if (i == 1 & j == 1) {
-      krill_rasterprep <- c(lon[[i]],lat[[j]],TotalKrill_CPUE[[i,j,1]])
-    } else {
-      new_row <- c(lon[[i]],lat[[j]],TotalKrill_CPUE[[i,j,1]])
-      krill_rasterprep <- rbind(krill_rasterprep, new_row)
-    }
-  }
-}
-krill_t1na <- data.frame(na.omit(krill_rasterprep))
-  
-krill_raster <- rasterFromXYZ(krill_rasterprep)
-krill_t1test <- data.frame(rasterToPoints(krill_raster))
-
-head(filter(krill_t1test,y==39.95))
-
-
-
-
-
-
-
-
-
-
-
-blwh_t1 <- data.frame(rasterToPoints(blwh_monthly[[1]]))
-krill_t1 <- data.frame(rasterToPoints(krill_monthly[[1]]))
-
-
-
-krill_wtf <- krill_t1test %>%
-  filter(x == -127.05 | y == 47.95)
-
-blwh_t1[[1,1]]
-
 # Opening whale and krill data --------------------------------------------
 fpath_blwh <- "~/Dropbox/blwh_sst_monthly/blwh_krill/blwh_monthly"
 fpath_krill <- "~/Dropbox/blwh_sst_monthly/blwh_krill/krill_monthly"
@@ -214,135 +147,255 @@ for(i in dfnames_bwkr[stringr::str_detect(dfnames_bwkr, ".csv")]){
   bwkr_monthly[[i]] <- tt
 }
 
+# Freq plots for 1990 -----------------------------------------------------
+bwkr_t1 <- bwkr_monthly[[1]]
+bwkr_t2 <- bwkr_monthly[[2]]
+bwkr_t3 <- bwkr_monthly[[3]]
+bwkr_t4 <- bwkr_monthly[[4]]
+bwkr_t5 <- bwkr_monthly[[5]]
+
+ggplot(bwkr_t1, aes(blwh)) +
+  geom_freqpoly(binwidth = 0.01) +
+  xlim(0, 1) +
+  ylim(0, 250) +
+  ggtitle("1990 March")
+
+ggplot(bwkr_t2, aes(blwh)) +
+  geom_freqpoly(binwidth = 0.01) +
+  xlim(0, 1) +
+  ylim(0, 250) +
+  ggtitle("1990 April")
+
+ggplot(bwkr_t3, aes(blwh)) +
+  geom_freqpoly(binwidth = 0.01) +
+  xlim(0, 1) +
+  ylim(0, 250) +
+  ggtitle("1990 May")
+
+ggplot(bwkr_t4, aes(blwh)) +
+  geom_freqpoly(binwidth = 0.01) +
+  xlim(0, 1) +
+  ylim(0, 250) +
+  ggtitle("1990 June")
+
+ggplot(bwkr_t5, aes(blwh)) +
+  geom_freqpoly(binwidth = 0.01) +
+  xlim(0, 1) +
+  ylim(0, 250) +
+  ggtitle("1990 July")
+
+ggplot(bwkr_t1, aes(krill)) +
+  geom_freqpoly(binwidth = 0.05) +
+  xlim(0, 10.5) +
+  ylim(0, 100) +
+  ggtitle("Krill CPUE 1990 March")
+
+ggplot(bwkr_t2, aes(krill)) +
+  geom_freqpoly(binwidth = 0.05) +
+  xlim(0, 10.5) +
+  ylim(0, 100) +
+  ggtitle("Krill CPUE 1990 April")
+
+ggplot(bwkr_t3, aes(krill)) +
+  geom_freqpoly(binwidth = 0.05) +
+  xlim(0, 10.5) +
+  ylim(0, 100) +
+  ggtitle("Krill CPUE 1990 May")
+
+ggplot(bwkr_t4, aes(krill)) +
+  geom_freqpoly(binwidth = 0.05) +
+  xlim(0, 10.5) +
+  ylim(0, 100) +
+  ggtitle("Krill CPUE 1990 June")
+
+ggplot(bwkr_t5, aes(krill)) +
+  geom_freqpoly(binwidth = 0.05) +
+  xlim(0, 10.5) +
+  ylim(0, 100) +
+  ggtitle("Krill CPUE 1990 July")
 
 # Overlap Metrics Code ----------------------------------------------------
 
+# Center of Gravity
 
 
-
-
-
-
-writeRaster(krill_monthly, "~/Desktop/Hollingsinternship/Code/Hollings-Internship/krill_monthly.nc", format="CDF")
-
-write.csv(krill_monthly_long, "~/Desktop/Hollingsinternship/Code/Hollings-Internship/krill_monthly_long.csv", row.names = FALSE)
-
-
-krill_t1_rasterprep1 <- c(lon[[1]],lat[[1]],krill_t1[[1,1]])
-new_row <- c(lon[[1]],lat[[2]],krill_t1[[1,2]])
-krill_t1_rasterprep1 <- rbind(krill_t1_rasterprep1, new_row)
-krill_t1_raster <- rasterFromXYZ(krill_t1_rasterprep1,crs=CRS("+proj=longlat +datum=WGS84 +ellps=WGS84 +towgs84=0,0,0"))
-
-plot(krill_t1_raster)
-
-krill_monthly<- list()
-for (i in seq_along(time)) {
-  x1 <- TotalKrill_CPUE[,,i]
-  x2 <- t(x1)
-  krill_monthly[[i]] <- raster(x2,
-                               xmn=range(lon[1]), xmx=range(lon[2])
-                               ymn=range(lat[1]), ymx=range(lat[2]),
-                               crs=CRS("+proj=longlat +datum=WGS84 +ellps=WGS84 +towgs84=0,0,0")
-                               )
+# Area Overlap
+# for binary data
+# measures proportion of an area where two species co-occur
+area_overlapfn <- function(prey, pred, area){
+  total_area <- sum(area, na.rm = T)
+  sum(area[pred > 0 & prey > 0], na.rm = T)/total_area
 }
 
-dat1=list()
-dat1$x=lon
-dat1$y=lat
-dat1$z=t(tmp.array.day)
+# Range Overlap
+# for binary data
+# measures the proportion of one species range where the other co-occurs
+range_overlapfn<-function(prey, pred, area){
+  area_prey <- sum(area[prey > 0], na.rm = T)
+  sum(area[pred > 0 & prey > 0], na.rm = T)/area_prey
+}
 
-r <-raster(
-  dat1$z,
-  xmn=range(dat1$x)[1], xmx=range(dat1$x)[2],
-  ymn=range(dat1$y)[1], ymx=range(dat1$y)[2], 
-  crs=CRS("+proj=longlat +datum=WGS84 +ellps=WGS84 +towgs84=0,0,0")
-)
+# Schoener's D
+# density or probability of occurrence data
+# measures how equally predator and prey share available resources
+schoeners_overlapfn <- function(prey, pred) {
+  p_prey <- prey/sum(prey, na.rm = T)
+  p_pred <- pred/sum(pred, na.rm = T)
+  1 - 0.5 * (sum(abs(p_prey-p_pred), na.rm = T))
+}
 
+# Bhattacharyya's coefficient
+# density or probability of occurrence data
+# measures whether two species use space independently
+bhatta_coeffn <- function(prey, pred) {
+  p_prey <- prey/sum(prey, na.rm = T)
+  p_pred <- pred/sum(pred, na.rm = T)
+  sum(sqrt(p_prey*p_pred), na.rm = T)
+}
+# Investigating threshold values ------------------------------------------
 
-krill_t1 <- TotalKrill_CPUE[,,1]
-krill_t1_transpose <- t(krill_t1)
-plot(krill_monthly[[2]])
+# Scatter Plots
+library("ggpubr")
+ggscatter(bwkr_t3, x = "krill", y = "blwh", 
+          add = "reg.line", conf.int = TRUE, 
+          cor.coef = TRUE, cor.method = "pearson",
+          xlab = "Krill (CPUE)", ylab = "Blue Whale (HS)") +
+  ggtitle("Blue Whale vs Krill 1990 May")
 
-# Flipping Krill, Lat and Lon Arrays for Visualization
-krill_flipped <- array(dim = c(185,180,155))
-for (t in 1:155) {
-  for (i in 1:185) {
-    for (j in 1:180) {
-      krill_flipped[[i,181-j,t]] <- krill_monthly[[i,j,t]]
-    }
+ggscatter(bwkr_t5, x = "krill", y = "blwh", 
+          add = "reg.line", conf.int = TRUE, 
+          cor.coef = TRUE, cor.method = "pearson",
+          xlab = "Krill (CPUE)", ylab = "Blue Whale (HS)") +
+  ggtitle("Blue Whale vs Krill 1990 July")
+
+# Plotting Pearson's Coefficient for all 155 months
+pcoef <- data.frame(matrix(NA,1,155))
+for (i in 1:155) {
+  pcoef[[i]] <- cor(bwkr_monthly[[i]]$blwh, bwkr_monthly[[i]]$krill, method = 'pearson')
+}
+plot(1:155,pcoef)
+lines(1:155,pcoef)
+
+# Area Overlap vs threshold value
+krill_threshold_t3 <- unname(quantile(bwkr_monthly[[3]]$krill, probs = seq(.01, 1, by = .01)))
+krill_threshold_t5 <- unname(quantile(bwkr_monthly[[5]]$krill, probs = seq(.01, 1, by = .01)))
+blwh_threshold <- c(0.15,0.25,0.35,0.45)
+
+AO_bwkr_t3 <- data.frame(matrix(NA,length(krill_threshold_t3),length(blwh_threshold)+1)) %>%
+  rename("krill_t" = "X1") %>%
+  rename("blwh_t15" = "X2") %>%
+  rename("blwh_t25" = "X3") %>%
+  rename("blwh_t35" = "X4") %>%
+  rename("blwh_t45" = "X5")
+for (j in 1:4) {
+  for (i in seq_along(krill_threshold_t3)) {
+    AO_bwkr_t3[[i,1]] <- krill_threshold_t3[[i]]
+    AO_bwkr_t3[[i,j+1]] <- bwkr_monthly[[3]] %>%
+      mutate(blwh_core = ifelse(blwh >= blwh_threshold[[j]],1,0), krill_core = ifelse(krill >= krill_threshold_t3[[i]],1,0), Area=1) %>%
+      summarise(AO=area_overlapfn(prey=krill_core,pred=blwh_core,area=Area)) %>%
+      unlist()
   }
 }
 
-lon_flipped <- array(NA,185)
-for (i in 1:185) {
-  lon_flipped[[186-i]] <- -lon[[i]]
-}
-
-lat_flipped <- array(NA,180)
-for (j in 1:180) {
-  lat_flipped[[181-j]] <- lat[[j]]
-}
-
-# Rasterizing Krill Data
-krill_t1 <- krill_monthly[,,1]
-krill_t1_flipped <- krill_flipped[,,1]
-
-rotate <- function(x) t(apply(x, 2, rev))
-
-krill_t1_transpose <- t(krill_t1)
-
-plot(raster(krill_t1))
-plot(raster(krill_t1_flipped))
-plot(raster(krill_t1_rotated))
-plot(raster(krill_t1_transpose))
-
-
-
-krill_t1_raster <- data_frame()
-raster()
-for (i in seq_along(lon)) {
-  for (j in seq_along(lat)) {
-    
+AO_bwkr_t5 <- data.frame(matrix(NA,length(krill_threshold_t5),length(blwh_threshold)+1)) %>%
+  rename("krill_t" = "X1") %>%
+  rename("blwh_t15" = "X2") %>%
+  rename("blwh_t25" = "X3") %>%
+  rename("blwh_t35" = "X4") %>%
+  rename("blwh_t45" = "X5")
+for (j in 1:4) {
+  for (i in seq_along(krill_threshold_t5)) {
+    AO_bwkr_t5[[i,1]] <- krill_threshold_t5[[i]]
+    AO_bwkr_t5[[i,j+1]] <- bwkr_monthly[[5]] %>%
+      mutate(blwh_core = ifelse(blwh >= blwh_threshold[[j]],1,0), krill_core = ifelse(krill >= krill_threshold_t5[[i]],1,0), Area=1) %>%
+      summarise(AO=area_overlapfn(prey=krill_core,pred=blwh_core,area=Area)) %>%
+      unlist()
   }
 }
 
+plot(rep(AO_bwkr_t3$krill_t[75],5),AO_bwkr_t3[75,],main="May 1990 AO vs Krill Threshold",
+     xlab="Krill Threshold", ylab="Area Overlap", ylim=c(0,1),xlim=c(2,11))
+lines(AO_bwkr_t3$krill_t,AO_bwkr_t3$blwh_t15,col="red")
+lines(AO_bwkr_t3$krill_t,AO_bwkr_t3$blwh_t25,col="orange")
+lines(AO_bwkr_t3$krill_t,AO_bwkr_t3$blwh_t35,col="green")
+lines(AO_bwkr_t3$krill_t,AO_bwkr_t3$blwh_t45,col="blue")
+legend(7.5, 0.95, legend=c("75th Percentile", "bw_tresh: 0.15", "bw_tresh: 0.25","bw_tresh: 0.35","bw_tresh: 0.45"),
+       col=c("black","red","orange","green","blue"),lty=1:2, cex=0.8)
 
+plot(rep(AO_bwkr_t5$krill_t[75],5),AO_bwkr_t5[75,],main="July 1990 AO vs Krill Threshold",
+     xlab="Krill Threshold", ylab="Area Overlap",ylim=c(0,1),xlim=c(2,11))
+lines(AO_bwkr_t5$krill_t,AO_bwkr_t5$blwh_t15,col="red")
+lines(AO_bwkr_t5$krill_t,AO_bwkr_t5$blwh_t25,col="orange")
+lines(AO_bwkr_t5$krill_t,AO_bwkr_t5$blwh_t35,col="green")
+lines(AO_bwkr_t5$krill_t,AO_bwkr_t5$blwh_t45,col="blue")
+legend(7.5, 0.95, legend=c("75th Percentile","bw_tresh: 0.15", "bw_tresh: 0.25","bw_tresh: 0.35","bw_tresh: 0.45"),
+       col=c("black","red","orange","green","blue"),lty=1:2, cex=0.8)
 
-for (i in seq_along(t)) {
-  
-}
+# All 4 metrics
 
-
-
-
-plot(krill_flipped[,,6])
-
-image(lon_flipped,lat_flipped,krill_flipped[,,6])
-
-
-
-
-
-
-lon_cal <- matrix(NA,185,180)
-lat_cal <- matrix(NA,185,180)
-for (i in 1:185) {
-  for (j in 1:180) {
-    lon_cal[[i,j]] <- lon[[i]]
-    lat_cal[[i,j]] <- lat[[j]]
+Overlap_bwkr_t5 <- data.frame(matrix(NA,length(krill_threshold_t5),17))
+colnames(Overlap_bwkr_t5) <- c("krill_t", "AO_bw15","AO_bw25","AO_bw35","AO_bw45","RO_bw15","RO_bw25","RO_bw35","RO_bw45",
+                    "Schoener_bw15","Schoener_bw25","Schoener_bw35","Schoener_bw45",
+                    "Bhatty_bw15","Bhatty_bw25","Bhatty_bw35","Bhatty_bw45")
+for (j in 1:4) {
+  for (i in seq_along(krill_threshold_t5)) {
+    Overlap_bwkr_t5[[i,1]] <- krill_threshold_t5[[i]]
+    AO_bwkr_t5[[i,j+1]] <- bwkr_monthly[[5]] %>%
+      mutate(blwh_core = ifelse(blwh >= blwh_threshold[[j]],1,0), krill_core = ifelse(krill >= krill_threshold_t5[[i]],1,0), Area=1) %>%
+      summarise(AO=area_overlapfn(prey=krill_core,pred=blwh_core,area=Area),
+                RO=range_overlapfn(prey=krill_core,pred=blwh_core,area=Area),
+                Schoener=schoeners_overlapfn(prey=krill,pred=blwh),
+                Bhatty=bhatta_coeffn(prey=krill,pred=blwh)) %>%
+      unlist()
   }
+
+# Applying overlap metrics to actual data ---------------------------------
+
+
+
+
+percentile75 <- data.frame(matrix(NA,155,2))
+for (i in 1:155) {
+  percentile75[[i,1]] <- quantile(bwkr_monthly[[i]]$blwh, c(0.75))
+  percentile75[[i,2]] <- quantile(bwkr_monthly[[i]]$krill, c(0.75))             
 }
+percentile75_avg <- data.frame(matrix(NA,5,2))
+for (i in 1:31) {
+  percentile75_avg[[i,1]] <- mean(percentile75[[]])
+  percentile75_avg[[i,2]] <- quantile(bwkr_monthly[[i]]$krill, c(0.75))             
+}
+lines(1:155,percentile75$X2)
 
-write.csv(krill_t1, "~/Desktop/Hollingsinternship/Code/Hollings-Internship/krill_t1.csv", row.names = FALSE)
-write.csv(lon_cal, "~/Desktop/Hollingsinternship/Code/Hollings-Internship/lon_cal.csv", row.names = FALSE)
-write.csv(lat_cal, "~/Desktop/Hollingsinternship/Code/Hollings-Internship/lat_cal.csv", row.names = FALSE)
 
 
-himage(lon,lat,krill_t1)
 
-plot(krill_t1)
+#####
 
-data(wrld_simpl)
-plot(wrld_simpl, xlim=c(-120,-80), ylim=c(0,60), axes=TRUE, col="light yellow")
-points(non_anomalous, pch=16, col=rgb(0, 0, 1, alpha=0.5), cex=0.3)
-points(anomalous, pch=16, col=rgb(1, 0, 0, alpha=0.5), cex=0.3)
+overlap_bwkr_t1 <- bwkr_t1 %>%
+  mutate(blwh_core = ifelse(blwh >= 0.28,1,0), krill_core = ifelse(krill >= 0.5,1,0), Area=1) %>%
+  # filter(Lat>=34 & Lat < 35,Lon <= -119 & Lon > -120) %>%
+  summarise(AO=area_overlapfn(prey=krill_core,pred=blwh_core,area=Area),
+            RO=range_overlapfn(prey=krill_core,pred=blwh_core,area=Area),
+            Schoener=schoeners_overlapfn(prey=krill,pred=blwh),
+            Bhatty=bhatta_coeffn(prey=krill,pred=blwh)) %>%
+  #pivot_longer(cols=c(AO,RO,Schoener,Bhatty),names_to="Metric_Name",values_to="Overlap_Metric")
+
+
+plot(blwh_t2_cut)
+plot(krill_monthly_raster[[1]])
+
+daily2015zoom <- sdm2015 %>% # make new dataframe called dailyzoom2015 which is a copy of sdm2015 and do the following below
+  mutate(Humpback_Core = ifelse(Humpback_HS >= 0.28,1,0),Anchovy_Core = ifelse(Anchovy_HS >= 0.5,1,0),Area=1) %>% # create a binary data column for range and area overlap of each species
+  filter(Lat>=34 & Lat < 35,Lon <= -119 & Lon > -120) %>% # retain values only within this lat-lon range
+  group_by(Date) %>% # organize by date
+  summarise(AO=area_overlapfn(prey=Anchovy_Core,pred=Humpback_Core,area=Area),RO=range_overlapfn(prey=Anchovy_Core,pred=Humpback_Core,area=Area), # apply the overlap metrics and output as new dataframe
+            Schoener=schoeners_overlapfn(prey=Anchovy_HS,pred=Humpback_HS), Bhatty=bhatta_coeffn(prey=Anchovy_HS,pred=Humpback_HS)) %>% 
+  pivot_longer(cols=c(AO,RO,Schoener,Bhatty),names_to="Metric_Name",values_to="Overlap_Metric") # change the dataframe into long format for easier plotting
+
+
+
+blwh_t1_cut <- rasterFromXYZ(select(bwkr_t1,x,y,blwh),crs=CRS("+proj=longlat +datum=WGS84 +ellps=WGS84 +towgs84=0,0,0"))
+krill_t1_cut <- rasterFromXYZ(select(bwkr_t1,x,y,krill),crs=CRS("+proj=longlat +datum=WGS84 +ellps=WGS84 +towgs84=0,0,0"))
+blwh_t2_cut <- rasterFromXYZ(select(bwkr_t2,x,y,blwh),crs=CRS("+proj=longlat +datum=WGS84 +ellps=WGS84 +towgs84=0,0,0"))
+krill_t2_cut <- rasterFromXYZ(select(bwkr_t2,x,y,krill),crs=CRS("+proj=longlat +datum=WGS84 +ellps=WGS84 +towgs84=0,0,0"))
+
