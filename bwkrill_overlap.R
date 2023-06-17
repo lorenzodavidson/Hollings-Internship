@@ -276,59 +276,79 @@ for (i in 1:155) {
 plot(1:155,pcoef)
 lines(1:155,pcoef)
 
-# Area Overlap vs threshold value
+# Area and Range Overlap vs threshold value
 krill_threshold_t3 <- unname(quantile(bwkr_monthly[[3]]$krill, probs = seq(.01, 1, by = .01)))
 krill_threshold_t5 <- unname(quantile(bwkr_monthly[[5]]$krill, probs = seq(.01, 1, by = .01)))
 blwh_threshold <- c(0.15,0.25,0.35,0.45)
 
-AO_bwkr_t3 <- data.frame(matrix(NA,length(krill_threshold_t3),length(blwh_threshold)+1)) %>%
-  rename("krill_t" = "X1") %>%
-  rename("blwh_t15" = "X2") %>%
-  rename("blwh_t25" = "X3") %>%
-  rename("blwh_t35" = "X4") %>%
-  rename("blwh_t45" = "X5")
+AO_bwkr_t3 <- data.frame(matrix(NA,length(krill_threshold_t3),length(blwh_threshold)))
+colnames(AO_bwkr_t3) <- c("blwh_15","blwh_25","blwh_35","blwh_45")
+RO_bwkr_t3 <- AO_bwkr_t3
 for (j in 1:4) {
   for (i in seq_along(krill_threshold_t3)) {
-    AO_bwkr_t3[[i,1]] <- krill_threshold_t3[[i]]
-    AO_bwkr_t3[[i,j+1]] <- bwkr_monthly[[3]] %>%
+    AO_bwkr_t3[[i,j]] <- bwkr_monthly[[3]] %>%
       mutate(blwh_core = ifelse(blwh >= blwh_threshold[[j]],1,0), krill_core = ifelse(krill >= krill_threshold_t3[[i]],1,0), Area=1) %>%
       summarise(AO=area_overlapfn(prey=krill_core,pred=blwh_core,area=Area)) %>%
       unlist()
-  }
-}
-
-AO_bwkr_t5 <- data.frame(matrix(NA,length(krill_threshold_t5),length(blwh_threshold)+1)) %>%
-  rename("krill_t" = "X1") %>%
-  rename("blwh_t15" = "X2") %>%
-  rename("blwh_t25" = "X3") %>%
-  rename("blwh_t35" = "X4") %>%
-  rename("blwh_t45" = "X5")
-for (j in 1:4) {
-  for (i in seq_along(krill_threshold_t5)) {
-    AO_bwkr_t5[[i,1]] <- krill_threshold_t5[[i]]
-    AO_bwkr_t5[[i,j+1]] <- bwkr_monthly[[5]] %>%
-      mutate(blwh_core = ifelse(blwh >= blwh_threshold[[j]],1,0), krill_core = ifelse(krill >= krill_threshold_t5[[i]],1,0), Area=1) %>%
-      summarise(AO=area_overlapfn(prey=krill_core,pred=blwh_core,area=Area)) %>%
+    RO_bwkr_t3[[i,j]] <- bwkr_monthly[[3]] %>%
+      mutate(blwh_core = ifelse(blwh >= blwh_threshold[[j]],1,0), krill_core = ifelse(krill >= krill_threshold_t3[[i]],1,0), Area=1) %>%
+      summarise(RO=range_overlapfn(prey=krill_core,pred=blwh_core,area=Area)) %>%
       unlist()
   }
 }
 
-plot(rep(AO_bwkr_t3$krill_t[75],5),AO_bwkr_t3[75,],main="May 1990 AO vs Krill Threshold",
+AO_bwkr_t5 <- data.frame(matrix(NA,length(krill_threshold_t5),length(blwh_threshold)))
+colnames(AO_bwkr_t5) <- c("blwh_15","blwh_25","blwh_35","blwh_45")
+RO_bwkr_t5 <- AO_bwkr_t5
+for (j in 1:4) {
+  for (i in seq_along(krill_threshold_t5)) {
+    AO_bwkr_t5[[i,j]] <- bwkr_monthly[[5]] %>%
+      mutate(blwh_core = ifelse(blwh >= blwh_threshold[[j]],1,0), krill_core = ifelse(krill >= krill_threshold_t5[[i]],1,0), Area=1) %>%
+      summarise(AO=area_overlapfn(prey=krill_core,pred=blwh_core,area=Area)) %>%
+      unlist()
+    RO_bwkr_t5[[i,j]] <- bwkr_monthly[[5]] %>%
+      mutate(blwh_core = ifelse(blwh >= blwh_threshold[[j]],1,0), krill_core = ifelse(krill >= krill_threshold_t5[[i]],1,0), Area=1) %>%
+      summarise(RO=range_overlapfn(prey=krill_core,pred=blwh_core,area=Area)) %>%
+      unlist()
+  }
+}
+
+# May 1990
+plot(rep(krill_threshold_t3[75],4),AO_bwkr_t3[75,],main="May 1990 AO vs Krill Threshold",
      xlab="Krill Threshold", ylab="Area Overlap", ylim=c(0,1),xlim=c(2,11))
-lines(AO_bwkr_t3$krill_t,AO_bwkr_t3$blwh_t15,col="red")
-lines(AO_bwkr_t3$krill_t,AO_bwkr_t3$blwh_t25,col="orange")
-lines(AO_bwkr_t3$krill_t,AO_bwkr_t3$blwh_t35,col="green")
-lines(AO_bwkr_t3$krill_t,AO_bwkr_t3$blwh_t45,col="blue")
+lines(krill_threshold_t3,AO_bwkr_t3$blwh_15,col="red")
+lines(krill_threshold_t3,AO_bwkr_t3$blwh_25,col="orange")
+lines(krill_threshold_t3,AO_bwkr_t3$blwh_35,col="green")
+lines(krill_threshold_t3,AO_bwkr_t3$blwh_45,col="blue")
 legend(7.5, 0.95, legend=c("75th Percentile", "bw_tresh: 0.15", "bw_tresh: 0.25","bw_tresh: 0.35","bw_tresh: 0.45"),
        col=c("black","red","orange","green","blue"),lty=1:2, cex=0.8)
 
-plot(rep(AO_bwkr_t5$krill_t[75],5),AO_bwkr_t5[75,],main="July 1990 AO vs Krill Threshold",
-     xlab="Krill Threshold", ylab="Area Overlap",ylim=c(0,1),xlim=c(2,11))
-lines(AO_bwkr_t5$krill_t,AO_bwkr_t5$blwh_t15,col="red")
-lines(AO_bwkr_t5$krill_t,AO_bwkr_t5$blwh_t25,col="orange")
-lines(AO_bwkr_t5$krill_t,AO_bwkr_t5$blwh_t35,col="green")
-lines(AO_bwkr_t5$krill_t,AO_bwkr_t5$blwh_t45,col="blue")
-legend(7.5, 0.95, legend=c("75th Percentile","bw_tresh: 0.15", "bw_tresh: 0.25","bw_tresh: 0.35","bw_tresh: 0.45"),
+plot(rep(krill_threshold_t3[75],4),RO_bwkr_t3[75,],main="May 1990 RO vs Krill Threshold",
+     xlab="Krill Threshold", ylab="Range Overlap", ylim=c(0,1),xlim=c(2,11))
+lines(krill_threshold_t3,RO_bwkr_t3$blwh_15,col="red")
+lines(krill_threshold_t3,RO_bwkr_t3$blwh_25,col="orange")
+lines(krill_threshold_t3,RO_bwkr_t3$blwh_35,col="green")
+lines(krill_threshold_t3,RO_bwkr_t3$blwh_45,col="blue")
+legend(7.5, 0.95, legend=c("75th Percentile", "bw_tresh: 0.15", "bw_tresh: 0.25","bw_tresh: 0.35","bw_tresh: 0.45"),
+       col=c("black","red","orange","green","blue"),lty=1:2, cex=0.8)
+
+# July 1990
+plot(rep(krill_threshold_t5[75],4),AO_bwkr_t5[75,],main="May 1990 AO vs Krill Threshold",
+     xlab="Krill Threshold", ylab="Area Overlap", ylim=c(0,1),xlim=c(2,11))
+lines(krill_threshold_t5,AO_bwkr_t5$blwh_15,col="red")
+lines(krill_threshold_t5,AO_bwkr_t5$blwh_25,col="orange")
+lines(krill_threshold_t5,AO_bwkr_t5$blwh_35,col="green")
+lines(krill_threshold_t5,AO_bwkr_t5$blwh_45,col="blue")
+legend(7.5, 0.95, legend=c("75th Percentile", "bw_tresh: 0.15", "bw_tresh: 0.25","bw_tresh: 0.35","bw_tresh: 0.45"),
+       col=c("black","red","orange","green","blue"),lty=1:2, cex=0.8)
+
+plot(rep(krill_threshold_t5[75],4),RO_bwkr_t5[75,],main="May 1990 RO vs Krill Threshold",
+     xlab="Krill Threshold", ylab="Range Overlap", ylim=c(0,1),xlim=c(2,11))
+lines(krill_threshold_t5,RO_bwkr_t5$blwh_15,col="red")
+lines(krill_threshold_t5,RO_bwkr_t5$blwh_25,col="orange")
+lines(krill_threshold_t5,RO_bwkr_t5$blwh_35,col="green")
+lines(krill_threshold_t5,RO_bwkr_t5$blwh_45,col="blue")
+legend(7.5, 0.95, legend=c("75th Percentile", "bw_tresh: 0.15", "bw_tresh: 0.25","bw_tresh: 0.35","bw_tresh: 0.45"),
        col=c("black","red","orange","green","blue"),lty=1:2, cex=0.8)
 
 # All 4 metrics
@@ -337,6 +357,7 @@ Overlap_bwkr_t5 <- data.frame(matrix(NA,length(krill_threshold_t5),17))
 colnames(Overlap_bwkr_t5) <- c("krill_t", "AO_bw15","AO_bw25","AO_bw35","AO_bw45","RO_bw15","RO_bw25","RO_bw35","RO_bw45",
                     "Schoener_bw15","Schoener_bw25","Schoener_bw35","Schoener_bw45",
                     "Bhatty_bw15","Bhatty_bw25","Bhatty_bw35","Bhatty_bw45")
+
 for (j in 1:4) {
   for (i in seq_along(krill_threshold_t5)) {
     Overlap_bwkr_t5[[i,1]] <- krill_threshold_t5[[i]]
@@ -348,6 +369,27 @@ for (j in 1:4) {
                 Bhatty=bhatta_coeffn(prey=krill,pred=blwh)) %>%
       unlist()
   }
+for (j in seq_along(blwh_threshold)) {
+  for (i in seq_along(krill_threshold_t5)) {
+    if (i == 1) {
+      metrics <- bwkr_monthly[[5]] %>%
+        mutate(blwh_core = ifelse(blwh >= blwh_threshold[[j]],1,0), krill_core = ifelse(krill >= krill_threshold_t5[[i]],1,0), Area=1) %>%
+        summarise(AO=area_overlapfn(prey=krill_core,pred=blwh_core,area=Area),
+                  RO=range_overlapfn(prey=krill_core,pred=blwh_core,area=Area)) %>%
+        unlist()
+      overlap_bwkr_t5 <- metrics
+    } else {
+      metrics <- bwkr_monthly[[5]] %>%
+        mutate(blwh_core = ifelse(blwh >= blwh_threshold[[j]],1,0), krill_core = ifelse(krill >= krill_threshold_t5[[i]],1,0), Area=1) %>%
+        summarise(AO=area_overlapfn(prey=krill_core,pred=blwh_core,area=Area),
+                  RO=range_overlapfn(prey=krill_core,pred=blwh_core,area=Area),
+                  Schoener=schoeners_overlapfn(prey=krill,pred=blwh),
+                  Bhatty=bhatta_coeffn(prey=krill,pred=blwh)) %>%
+        unlist()
+      overlap_bwkr_t5 <- rbind(overlap_bwkr_t5,metrics)
+    }
+  }
+}
 
 # Applying overlap metrics to actual data ---------------------------------
 
