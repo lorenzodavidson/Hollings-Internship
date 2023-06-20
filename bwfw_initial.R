@@ -53,7 +53,8 @@ back.IDs = sapply(strsplit(map_background$names, ":"), function(x) x[1])
 back.sp = map2SpatialPolygons(map_background, IDs=back.IDs, proj4string=CRS("+proj=longlat +datum=WGS84"))
 
 # Remove Data
-bwfw_clean<-removeland(bwfw,back.sp)
+
+bwfw_clean <- removeland(bwfw,back.sp)
 
 # Calculate timestep, distance and residual ---------------------------------------------------
 
@@ -102,7 +103,7 @@ apply_calcs <- function(df) {
     cbind(residual_error)
 }
 
-bwfw_calculations50 <- data.frame(apply_calcs(bwfw_clean))
+bwfw_calculations <- data.frame(apply_calcs(bwfw_clean))
 write.csv(bwfw_calculations, "~/Desktop/Hollingsinternship/Code/Hollings-Internship/bwfw_calculations.csv", row.names = FALSE)
 
 # Find and Visualize Anomalous Points ---------------------------------------------------
@@ -123,7 +124,7 @@ ggplot(bwfw_anomlarge,aes(x = tag)) +
 ggplot(bwfw_anomsmall,aes(x = tag)) +
   stat_count()
 
-bwfw_calculations50$anom <- 0
+bwfw_calculations$anom <- 0
 # Setting large anomaly points to 1 and small anomaly points to 0.5
 for (i in seq_along(bwfw_anomlarge$feature_id)) {
   index <- which(bwfw_calculations$feature_id == bwfw_anomlarge$feature_id[[i]])
@@ -143,9 +144,9 @@ coordinates(large_anomalous) = ~lon+lat
 
 data(wrld_simpl)
 plot(wrld_simpl, xlim=c(-120,-80), ylim=c(0,60), axes=TRUE, col="light yellow")
-points(non_anomalous, pch=16, col=rgb(0, 0, 1, alpha=0.5), cex=0.3)
-points(small_anomalous, pch=16, col=rgb(0, 1, 0, alpha=0.5), cex=0.3)
-points(large_anomalous, pch=16, col=rgb(1, 0, 0, alpha=0.5), cex=0.3)
+points(non_anomalous, pch=16, col=rgb(0, 0, 1, alpha=0.5), cex=0.5)
+points(small_anomalous, pch=16, col=rgb(0, 1, 0, alpha=0.5), cex=0.5)
+points(large_anomalous, pch=16, col=rgb(1, 0, 0, alpha=0.5), cex=0.5)
 
 
 # Remove 1st Anomaly of Pairs and Run Detention Again ---------------------

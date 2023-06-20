@@ -147,6 +147,9 @@ for(i in dfnames_bwkr[stringr::str_detect(dfnames_bwkr, ".csv")]){
   bwkr_monthly[[i]] <- tt
 }
 
+krill_t1 <- krill_monthly_xyz[[1]]
+blwh_t1 <- blwh_monthly_xyz[[1]]
+
 # Freq plots for 1990 -----------------------------------------------------
 bwkr_t1 <- bwkr_monthly[[1]]
 bwkr_t2 <- bwkr_monthly[[2]]
@@ -333,7 +336,7 @@ legend(7.5, 0.95, legend=c("75th Percentile", "bw_tresh: 0.15", "bw_tresh: 0.25"
        col=c("black","red","orange","green","blue"),lty=1:2, cex=0.8)
 
 # July 1990
-plot(rep(krill_threshold_t5[75],4),AO_bwkr_t5[75,],main="May 1990 AO vs Krill Threshold",
+plot(rep(krill_threshold_t5[75],4),AO_bwkr_t5[75,],main="July 1990 AO vs Krill Threshold",
      xlab="Krill Threshold", ylab="Area Overlap", ylim=c(0,1),xlim=c(2,11))
 lines(krill_threshold_t5,AO_bwkr_t5$blwh_15,col="red")
 lines(krill_threshold_t5,AO_bwkr_t5$blwh_25,col="orange")
@@ -342,14 +345,18 @@ lines(krill_threshold_t5,AO_bwkr_t5$blwh_45,col="blue")
 legend(7.5, 0.95, legend=c("75th Percentile", "bw_tresh: 0.15", "bw_tresh: 0.25","bw_tresh: 0.35","bw_tresh: 0.45"),
        col=c("black","red","orange","green","blue"),lty=1:2, cex=0.8)
 
-plot(rep(krill_threshold_t5[75],4),RO_bwkr_t5[75,],main="May 1990 RO vs Krill Threshold",
+plot(rep(krill_threshold_t5[75],4),RO_bwkr_t5[75,],main="July 1990 RO vs Krill Threshold",
      xlab="Krill Threshold", ylab="Range Overlap", ylim=c(0,1),xlim=c(2,11))
 lines(krill_threshold_t5,RO_bwkr_t5$blwh_15,col="red")
 lines(krill_threshold_t5,RO_bwkr_t5$blwh_25,col="orange")
 lines(krill_threshold_t5,RO_bwkr_t5$blwh_35,col="green")
 lines(krill_threshold_t5,RO_bwkr_t5$blwh_45,col="blue")
-legend(7.5, 0.95, legend=c("75th Percentile", "bw_tresh: 0.15", "bw_tresh: 0.25","bw_tresh: 0.35","bw_tresh: 0.45"),
+legend(2, 0.4, legend=c("75th Percentile", "bw_tresh: 0.15", "bw_tresh: 0.25","bw_tresh: 0.35","bw_tresh: 0.45"),
        col=c("black","red","orange","green","blue"),lty=1:2, cex=0.8)
+
+
+
+
 
 # All 4 metrics
 
