@@ -147,8 +147,41 @@ for(i in dfnames_bwkr[stringr::str_detect(dfnames_bwkr, ".csv")]){
   bwkr_monthly[[i]] <- tt
 }
 
-krill_t1 <- krill_monthly_xyz[[1]]
-blwh_t1 <- blwh_monthly_xyz[[1]]
+# Create vector with all dates
+months <- c("03","04","05","06","07")
+years <- c(1990:2020)
+dates <- vector("character", 155)
+year_month <- data.frame(matrix(NA,155,2)) %>%
+  rename("year"= "X1") %>%
+  rename("month"= "X2")
+
+for (i in seq_along(years)) {
+  for (j in seq_along(months)) {
+    x <- i*5 - 5 + j
+    if (i == 1 & j == 1) {
+      dates[[x]] <- as.character(paste0(years[[i]],"-",months[[j]]))
+      year_month[[x,1]] <- as.character(paste0(years[[i]]))
+      year_month[[x,2]] <- as.character(paste0(months[[j]]))
+    } else {
+      dates[[x]] <- rbind(as.character(paste0(years[[i]],"-",months[[j]])))
+      year_month[[x,1]] <- as.character(paste0(years[[i]]))
+      year_month[[x,2]] <- as.character(paste0(months[[j]]))
+    }
+  }
+}
+
+# All values for 155 months
+bwkr_all <- data.frame(bwkr_monthly[[1]])
+bwkr_all$date <- dates[[1]]
+bwkr_all$year <- year_month$year[[1]]
+bwkr_all$month <- year_month$month[[1]]
+for (i in 2:155) {
+  bwkr_add <- bwkr_monthly[[i]]
+  bwkr_add$date <- dates[[i]]
+  bwkr_add$year <- year_month$year[[i]]
+  bwkr_add$month <- year_month$month[[i]]
+  bwkr_all <- rbind(bwkr_all, bwkr_add)
+}
 
 # Freq plots for 1990 -----------------------------------------------------
 bwkr_t1 <- bwkr_monthly[[1]]
@@ -355,96 +388,75 @@ legend(2, 0.4, legend=c("75th Percentile", "bw_tresh: 0.15", "bw_tresh: 0.25","b
        col=c("black","red","orange","green","blue"),lty=1:2, cex=0.8)
 
 
+# Metrics for thresh: blwh 0.28 + krill 75% -------------------------------
 
+# Matching krill threshold to % blwh above 0.28 threshold and calculating metrics
+blwh_028 <- filter(bwkr_all,bwkr_all$blwh>0.28) # 23% of data
+krill_75p_thresh <- unname(quantile(bwkr_all$krill, 0.75))
+krill_75p <- filter(bwkr_all,bwkr_all$krill>krill_75p_thresh) 
 
-
-# All 4 metrics
-
-Overlap_bwkr_t5 <- data.frame(matrix(NA,length(krill_threshold_t5),17))
-colnames(Overlap_bwkr_t5) <- c("krill_t", "AO_bw15","AO_bw25","AO_bw35","AO_bw45","RO_bw15","RO_bw25","RO_bw35","RO_bw45",
-                    "Schoener_bw15","Schoener_bw25","Schoener_bw35","Schoener_bw45",
-                    "Bhatty_bw15","Bhatty_bw25","Bhatty_bw35","Bhatty_bw45")
-
-for (j in 1:4) {
-  for (i in seq_along(krill_threshold_t5)) {
-    Overlap_bwkr_t5[[i,1]] <- krill_threshold_t5[[i]]
-    AO_bwkr_t5[[i,j+1]] <- bwkr_monthly[[5]] %>%
-      mutate(blwh_core = ifelse(blwh >= blwh_threshold[[j]],1,0), krill_core = ifelse(krill >= krill_threshold_t5[[i]],1,0), Area=1) %>%
-      summarise(AO=area_overlapfn(prey=krill_core,pred=blwh_core,area=Area),
-                RO=range_overlapfn(prey=krill_core,pred=blwh_core,area=Area),
-                Schoener=schoeners_overlapfn(prey=krill,pred=blwh),
-                Bhatty=bhatta_coeffn(prey=krill,pred=blwh)) %>%
-      unlist()
-  }
-for (j in seq_along(blwh_threshold)) {
-  for (i in seq_along(krill_threshold_t5)) {
-    if (i == 1) {
-      metrics <- bwkr_monthly[[5]] %>%
-        mutate(blwh_core = ifelse(blwh >= blwh_threshold[[j]],1,0), krill_core = ifelse(krill >= krill_threshold_t5[[i]],1,0), Area=1) %>%
-        summarise(AO=area_overlapfn(prey=krill_core,pred=blwh_core,area=Area),
-                  RO=range_overlapfn(prey=krill_core,pred=blwh_core,area=Area)) %>%
-        unlist()
-      overlap_bwkr_t5 <- metrics
-    } else {
-      metrics <- bwkr_monthly[[5]] %>%
-        mutate(blwh_core = ifelse(blwh >= blwh_threshold[[j]],1,0), krill_core = ifelse(krill >= krill_threshold_t5[[i]],1,0), Area=1) %>%
-        summarise(AO=area_overlapfn(prey=krill_core,pred=blwh_core,area=Area),
-                  RO=range_overlapfn(prey=krill_core,pred=blwh_core,area=Area),
-                  Schoener=schoeners_overlapfn(prey=krill,pred=blwh),
-                  Bhatty=bhatta_coeffn(prey=krill,pred=blwh)) %>%
-        unlist()
-      overlap_bwkr_t5 <- rbind(overlap_bwkr_t5,metrics)
-    }
-  }
-}
-
-# Applying overlap metrics to actual data ---------------------------------
-
-
-
-
-percentile75 <- data.frame(matrix(NA,155,2))
-for (i in 1:155) {
-  percentile75[[i,1]] <- quantile(bwkr_monthly[[i]]$blwh, c(0.75))
-  percentile75[[i,2]] <- quantile(bwkr_monthly[[i]]$krill, c(0.75))             
-}
-percentile75_avg <- data.frame(matrix(NA,5,2))
-for (i in 1:31) {
-  percentile75_avg[[i,1]] <- mean(percentile75[[]])
-  percentile75_avg[[i,2]] <- quantile(bwkr_monthly[[i]]$krill, c(0.75))             
-}
-lines(1:155,percentile75$X2)
-
-
-
-
-#####
-
-overlap_bwkr_t1 <- bwkr_t1 %>%
-  mutate(blwh_core = ifelse(blwh >= 0.28,1,0), krill_core = ifelse(krill >= 0.5,1,0), Area=1) %>%
-  # filter(Lat>=34 & Lat < 35,Lon <= -119 & Lon > -120) %>%
+bwkr_metrics <- bwkr_all %>% # make new dataframe called dailyzoom2015 which is a copy of sdm2015 and do the following below
+  mutate(blwh_core = ifelse(blwh >= 0.28,1,0), krill_core = ifelse(krill >= krill_75p_thresh,1,0), Area=1) %>% # create a binary data column for range and area overlap of each species
+  group_by(date,year,month) %>% # organize by date
   summarise(AO=area_overlapfn(prey=krill_core,pred=blwh_core,area=Area),
             RO=range_overlapfn(prey=krill_core,pred=blwh_core,area=Area),
             Schoener=schoeners_overlapfn(prey=krill,pred=blwh),
-            Bhatty=bhatta_coeffn(prey=krill,pred=blwh)) %>%
-  #pivot_longer(cols=c(AO,RO,Schoener,Bhatty),names_to="Metric_Name",values_to="Overlap_Metric")
-
-
-plot(blwh_t2_cut)
-plot(krill_monthly_raster[[1]])
-
-daily2015zoom <- sdm2015 %>% # make new dataframe called dailyzoom2015 which is a copy of sdm2015 and do the following below
-  mutate(Humpback_Core = ifelse(Humpback_HS >= 0.28,1,0),Anchovy_Core = ifelse(Anchovy_HS >= 0.5,1,0),Area=1) %>% # create a binary data column for range and area overlap of each species
-  filter(Lat>=34 & Lat < 35,Lon <= -119 & Lon > -120) %>% # retain values only within this lat-lon range
-  group_by(Date) %>% # organize by date
-  summarise(AO=area_overlapfn(prey=Anchovy_Core,pred=Humpback_Core,area=Area),RO=range_overlapfn(prey=Anchovy_Core,pred=Humpback_Core,area=Area), # apply the overlap metrics and output as new dataframe
-            Schoener=schoeners_overlapfn(prey=Anchovy_HS,pred=Humpback_HS), Bhatty=bhatta_coeffn(prey=Anchovy_HS,pred=Humpback_HS)) %>% 
+            Bhatty=bhatta_coeffn(prey=krill,pred=blwh)) %>% 
   pivot_longer(cols=c(AO,RO,Schoener,Bhatty),names_to="Metric_Name",values_to="Overlap_Metric") # change the dataframe into long format for easier plotting
 
+AO_all <- filter(bwkr_metrics,Metric_Name=="AO")
+AO_bymonth <- group_by(AO_all,month)
+RO_all <- filter(bwkr_metrics,Metric_Name=="RO")
+RO_bymonth <- group_by(RO_all,month)
+Schoener_all <- filter(bwkr_metrics,Metric_Name=="Schoener")
+Schoener_bymonth <- group_by(Schoener_all,month)
+Bhatty_all <- filter(bwkr_metrics,Metric_Name=="Bhatty")
+Bhatty_bymonth <- group_by(Bhatty_all,month)
 
+# AO Plots
+ggplot(AO_all,aes(x=date,y=Overlap_Metric,group = 1)) +
+  geom_point() + 
+  geom_line() +
+  ggtitle("AO 1990-2020") +
+  ylab("Area Overlap")
+ggplot(AO_bymonth,aes(x=month,y=Overlap_Metric)) +
+  geom_boxplot() +
+  ggtitle("AO grouped by month") +
+  xlab("Month (March-July)") + 
+  ylab("Area Overlap")
 
-blwh_t1_cut <- rasterFromXYZ(select(bwkr_t1,x,y,blwh),crs=CRS("+proj=longlat +datum=WGS84 +ellps=WGS84 +towgs84=0,0,0"))
-krill_t1_cut <- rasterFromXYZ(select(bwkr_t1,x,y,krill),crs=CRS("+proj=longlat +datum=WGS84 +ellps=WGS84 +towgs84=0,0,0"))
-blwh_t2_cut <- rasterFromXYZ(select(bwkr_t2,x,y,blwh),crs=CRS("+proj=longlat +datum=WGS84 +ellps=WGS84 +towgs84=0,0,0"))
-krill_t2_cut <- rasterFromXYZ(select(bwkr_t2,x,y,krill),crs=CRS("+proj=longlat +datum=WGS84 +ellps=WGS84 +towgs84=0,0,0"))
+# RO Plots
+ggplot(RO_all,aes(x=date,y=Overlap_Metric,group = 1)) +
+  geom_point() + 
+  geom_line() +
+  ggtitle("RO 1990-2020") +
+  ylab("Range Overlap")
+ggplot(RO_bymonth,aes(x=month,y=Overlap_Metric)) +
+  geom_boxplot() +
+  ggtitle("RO grouped by month") +
+  xlab("Month (March-July)") + 
+  ylab("Range Overlap")
 
+# Schoener Plots
+ggplot(Schoener_all,aes(x=date,y=Overlap_Metric,group = 1)) +
+  geom_point() + 
+  geom_line() +
+  ggtitle("Schoener's D 1990-2020") +
+  ylab("Schoener's D")
+ggplot(Schoener_bymonth,aes(x=month,y=Overlap_Metric)) +
+  geom_boxplot() +
+  ggtitle("Schoener's D grouped by month") +
+  xlab("Month (March-July)") + 
+  ylab("Schoener's D")
+
+# Bhattacharyya Plots
+ggplot(Bhatty_all,aes(x=date,y=Overlap_Metric,group = 1)) +
+  geom_point() + 
+  geom_line() +
+  ggtitle("Bhattacharyya's Coefficient 1990-2020") +
+  ylab("Bhattacharyya's Coefficient")
+ggplot(Bhatty_bymonth,aes(x=month,y=Overlap_Metric)) +
+  geom_boxplot() +
+  ggtitle("Bhattacharyya's Coefficient grouped by month") +
+  xlab("Month (March-July)") + 
+  ylab("Bhattacharyya's Coefficient")
