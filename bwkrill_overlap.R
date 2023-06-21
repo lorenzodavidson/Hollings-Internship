@@ -460,3 +460,31 @@ ggplot(Bhatty_bymonth,aes(x=month,y=Overlap_Metric)) +
   ggtitle("Bhattacharyya's Coefficient grouped by month") +
   xlab("Month (March-July)") + 
   ylab("Bhattacharyya's Coefficient")
+
+# Visualize area overlap --------------------------------------------------
+
+AO_filtered <- bwkr_all %>% # make new dataframe called dailyzoom2015 which is a copy of sdm2015 and do the following below
+  mutate(blwh_core = ifelse(blwh >= 0.28,1,0), krill_core = ifelse(krill >= krill_75p_thresh,1,0), Area=1) %>% # create a binary data column for range and area overlap of each species
+  filter(blwh_core == 1 & krill_core == 1)
+AO_filtered <- AO_filtered[,-8:-9] %>%
+  filter(month == "06" | month == "07" )
+dates_filtered <- unique(AO_filtered$date)
+
+
+AO_monthly_raster <- list()
+for (i in 1:length(dates_filtered)) {
+  AO_rasterprep <- filter(AO_filtered, date == dates_filtered[[i]])
+  AO_rasterprep <- AO_rasterprep[,-3:-7] 
+  AO_monthly_raster[[i]] <- rasterFromXYZ(AO_rasterprep)
+}
+
+plot(AO_monthly_raster[[43]])
+
+for (i in 1:nrow(sst.rasters)) {
+  sst.raster <- raster(sst.rasters$file_paths[i])
+  blwh.raster <- raster(whale.rasters$file_paths[i])
+  png(file = paste0("C:/Users/kaila/Dropbox/Monthly Hindcast Blue Whale Data 1981-2021/combined/", as.character(sst.rasters$year[i]), ".", as.character(sst.rasters$month[i]), ".png"))
+  plot(sst.raster, xlab=as.character(sst.rasters$year[i]), main="Sea Surface Temperature and Blue Whale Habitat Suitability > 0.3 (Green)", col=grey(1:50/50))
+  plot(blwh.raster, alpha=0.5, add=T, breaks=c(0.3,1), legend=F, col=terrain.colors(3))
+  dev.off()
+}
