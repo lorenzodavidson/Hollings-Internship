@@ -81,32 +81,69 @@ for (t in seq_along(time)) {
   #krill_monthly_raster[[t]] <- krill_raster
 }
 
-# Creating bwkr dataset
+# Creating bwkr_monthly dataset
 bwkr_monthly <- list()
 for (t in seq_along(time)) {
   bwkr_monthly[[t]] <- inner_join(blwh_monthly_xyz[[t]],krill_monthly_xyz[[t]]) %>%
     rename("blwh" = "layer")
 }
 
-# Save all 5 datasets as csv or raster files
+# Creating bwkr_all 
+months <- c("03","04","05","06","07")
+years <- c(1990:2020)
+dates <- vector("character", 155)
+year_month <- data.frame(matrix(NA,155,2)) %>%
+  rename("year"= "X1") %>%
+  rename("month"= "X2")
+
+for (i in seq_along(years)) {
+  for (j in seq_along(months)) {
+    x <- i*5 - 5 + j
+    if (i == 1 & j == 1) {
+      dates[[x]] <- as.character(paste0(years[[i]],"-",months[[j]]))
+      year_month[[x,1]] <- as.character(paste0(years[[i]]))
+      year_month[[x,2]] <- as.character(paste0(months[[j]]))
+    } else {
+      dates[[x]] <- rbind(as.character(paste0(years[[i]],"-",months[[j]])))
+      year_month[[x,1]] <- as.character(paste0(years[[i]]))
+      year_month[[x,2]] <- as.character(paste0(months[[j]]))
+    }
+  }
+}
+
+bwkr_all <- data.frame(bwkr_monthly[[1]])
+bwkr_all$date <- dates[[1]]
+bwkr_all$year <- year_month$year[[1]]
+bwkr_all$month <- year_month$month[[1]]
+for (i in 2:155) {
+  bwkr_add <- bwkr_monthly[[i]]
+  bwkr_add$date <- dates[[i]]
+  bwkr_add$year <- year_month$year[[i]]
+  bwkr_add$month <- year_month$month[[i]]
+  bwkr_all <- rbind(bwkr_all, bwkr_add)
+}
+
+# Save all 6 datasets as csv or raster files
 fpath_bwkr <- "~/Dropbox/blwh_sst_monthly/blwh_krill/bwkr_monthly"
 fpath_blwh <- "~/Dropbox/blwh_sst_monthly/blwh_krill/blwh_monthly"
 fpath_krill <- "~/Dropbox/blwh_sst_monthly/blwh_krill/krill_monthly"
 for (i in seq_along(years)) {
   for (j in seq_along(months)) {
     x <- i*5 - 5 + j
-    bwkr_name <- paste0("bwkr_", years[[i]], "_", months[[j]],".csv") # Need to figure out
+    bwkr_name <- paste0("bwkr_", years[[i]], "_", months[[j]],".csv")
     write.csv(bwkr_monthly[[x]],paste0(fpath_bwkr,"/",bwkr_name),row.names = FALSE)
     
     blwh_name <- paste0("blwh_", years[[i]], "_", months[[j]])
     write.csv(blwh_monthly_xyz[[x]],paste0(fpath_blwh,"/",blwh_name,".csv"),row.names = FALSE)
-    writeRaster(blwh_monthly_raster[[x]],paste0(fpath_blwh,"/",blwh_name,".grd"),format = "raster") # Figure out how to save rasters
+    writeRaster(blwh_monthly_raster[[x]],paste0(fpath_blwh,"/",blwh_name,".grd"),format = "raster")
     
     krill_name <- paste0("krill_", years[[i]], "_", months[[j]])
     write.csv(krill_monthly_xyz[[x]],paste0(fpath_krill,"/",krill_name,".csv"),row.names = FALSE)
     writeRaster(krill_monthly_raster[[x]],paste0(fpath_krill,"/",krill_name,".grd"),format = "raster")
   }
 }
+
+write.csv(bwkr_all,paste0(fpath_bwkr,"/bwkr_all.csv"),row.names = FALSE) # bwkr_all
 
 # Opening whale and krill data --------------------------------------------
 fpath_blwh <- "~/Dropbox/blwh_sst_monthly/blwh_krill/blwh_monthly"
@@ -147,108 +184,29 @@ for(i in dfnames_bwkr[stringr::str_detect(dfnames_bwkr, ".csv")]){
   bwkr_monthly[[i]] <- tt
 }
 
-# Create vector with all dates
-months <- c("03","04","05","06","07")
-years <- c(1990:2020)
-dates <- vector("character", 155)
-year_month <- data.frame(matrix(NA,155,2)) %>%
-  rename("year"= "X1") %>%
-  rename("month"= "X2")
+bwkr_all <- read.csv(paste0(fpath_bwkr,"/bwkr_all.csv"))
 
-for (i in seq_along(years)) {
-  for (j in seq_along(months)) {
-    x <- i*5 - 5 + j
-    if (i == 1 & j == 1) {
-      dates[[x]] <- as.character(paste0(years[[i]],"-",months[[j]]))
-      year_month[[x,1]] <- as.character(paste0(years[[i]]))
-      year_month[[x,2]] <- as.character(paste0(months[[j]]))
-    } else {
-      dates[[x]] <- rbind(as.character(paste0(years[[i]],"-",months[[j]])))
-      year_month[[x,1]] <- as.character(paste0(years[[i]]))
-      year_month[[x,2]] <- as.character(paste0(months[[j]]))
-    }
-  }
-}
+# Freq plot by month -----------------------------------------------------
+bwkr_march <- filter(bwkr_all, month == 3)
+bwkr_april <- filter(bwkr_all, month == 4)
+bwkr_may <- filter(bwkr_all, month == 5)
+bwkr_june <- filter(bwkr_all, month == 6)
+bwkr_july <- filter(bwkr_all, month == 7)
 
-# All values for 155 months
-bwkr_all <- data.frame(bwkr_monthly[[1]])
-bwkr_all$date <- dates[[1]]
-bwkr_all$year <- year_month$year[[1]]
-bwkr_all$month <- year_month$month[[1]]
-for (i in 2:155) {
-  bwkr_add <- bwkr_monthly[[i]]
-  bwkr_add$date <- dates[[i]]
-  bwkr_add$year <- year_month$year[[i]]
-  bwkr_add$month <- year_month$month[[i]]
-  bwkr_all <- rbind(bwkr_all, bwkr_add)
-}
+bwkr_bymonth <- data.frame(group_by(bwkr_all,month))
+bwkr_bymonth$month <- as.character(bwkr_bymonth$month) # Convert to character for grouping in ggplot
 
-# Freq plots for 1990 -----------------------------------------------------
-bwkr_t1 <- bwkr_monthly[[1]]
-bwkr_t2 <- bwkr_monthly[[2]]
-bwkr_t3 <- bwkr_monthly[[3]]
-bwkr_t4 <- bwkr_monthly[[4]]
-bwkr_t5 <- bwkr_monthly[[5]]
-
-ggplot(bwkr_t1, aes(blwh)) +
-  geom_freqpoly(binwidth = 0.01) +
+ggplot(bwkr_bymonth, aes(blwh,color=month)) +
+  geom_freqpoly(binwidth = 0.01,linewidth=1) +
   xlim(0, 1) +
-  ylim(0, 250) +
-  ggtitle("1990 March")
+  ylim(0,20000) +
+  ggtitle("Monthly Blue Whale HS Frequency")
 
-ggplot(bwkr_t2, aes(blwh)) +
-  geom_freqpoly(binwidth = 0.01) +
-  xlim(0, 1) +
-  ylim(0, 250) +
-  ggtitle("1990 April")
-
-ggplot(bwkr_t3, aes(blwh)) +
-  geom_freqpoly(binwidth = 0.01) +
-  xlim(0, 1) +
-  ylim(0, 250) +
-  ggtitle("1990 May")
-
-ggplot(bwkr_t4, aes(blwh)) +
-  geom_freqpoly(binwidth = 0.01) +
-  xlim(0, 1) +
-  ylim(0, 250) +
-  ggtitle("1990 June")
-
-ggplot(bwkr_t5, aes(blwh)) +
-  geom_freqpoly(binwidth = 0.01) +
-  xlim(0, 1) +
-  ylim(0, 250) +
-  ggtitle("1990 July")
-
-ggplot(bwkr_t1, aes(krill)) +
-  geom_freqpoly(binwidth = 0.05) +
-  xlim(0, 10.5) +
-  ylim(0, 100) +
-  ggtitle("Krill CPUE 1990 March")
-
-ggplot(bwkr_t2, aes(krill)) +
-  geom_freqpoly(binwidth = 0.05) +
-  xlim(0, 10.5) +
-  ylim(0, 100) +
-  ggtitle("Krill CPUE 1990 April")
-
-ggplot(bwkr_t3, aes(krill)) +
-  geom_freqpoly(binwidth = 0.05) +
-  xlim(0, 10.5) +
-  ylim(0, 100) +
-  ggtitle("Krill CPUE 1990 May")
-
-ggplot(bwkr_t4, aes(krill)) +
-  geom_freqpoly(binwidth = 0.05) +
-  xlim(0, 10.5) +
-  ylim(0, 100) +
-  ggtitle("Krill CPUE 1990 June")
-
-ggplot(bwkr_t5, aes(krill)) +
-  geom_freqpoly(binwidth = 0.05) +
-  xlim(0, 10.5) +
-  ylim(0, 100) +
-  ggtitle("Krill CPUE 1990 July")
+ggplot(bwkr_bymonth, aes(krill,color=month)) +
+  geom_freqpoly(binwidth = 0.02,linewidth=1) +
+  xlim(range(bwkr_bymonth$krill)[[1]], range(bwkr_bymonth$krill)[[2]]) +
+  # ylim(0,20000) +
+  ggtitle("Monthly Krill HS Frequency")
 
 # Overlap Metrics Code ----------------------------------------------------
 
@@ -288,7 +246,7 @@ bhatta_coeffn <- function(prey, pred) {
   p_pred <- pred/sum(pred, na.rm = T)
   sum(sqrt(p_prey*p_pred), na.rm = T)
 }
-# Investigating threshold values ------------------------------------------
+# Initial investigation of threshold values --------------------------------
 
 # Scatter Plots
 library("ggpubr")
@@ -388,6 +346,73 @@ legend(2, 0.4, legend=c("75th Percentile", "bw_tresh: 0.15", "bw_tresh: 0.25","b
        col=c("black","red","orange","green","blue"),lty=1:2, cex=0.8)
 
 
+# Overlap Metrics for 9 different threshold combinations -------------------
+
+krill_85p_thresh <- unname(quantile(bwkr_all$krill, 0.85))
+krill_75p_thresh <- unname(quantile(bwkr_all$krill, 0.75))
+krill_65p_thresh <- unname(quantile(bwkr_all$krill, 0.65))
+blwh_85p_thresh <- unname(quantile(bwkr_all$blwh, 0.85))
+blwh_75p_thresh <- unname(quantile(bwkr_all$blwh, 0.75))
+blwh_65p_thresh <- unname(quantile(bwkr_all$blwh, 0.65))
+krill_thresh <- c(krill_65p_thresh,krill_75p_thresh,krill_85p_thresh)
+blwh_thresh <- c(blwh_65p_thresh,blwh_75p_thresh,blwh_85p_thresh)
+
+bwkr_metrics_9combo <- bwkr_all
+bwkr_metrics_9combo <- bwkr_metrics_9combo %>% 
+  mutate(blwh_core_65 = ifelse(blwh >= blwh_tresh[[1]],1,0), 
+         blwh_core_75 = ifelse(blwh >= blwh_tresh[[2]],1,0),
+         blwh_core_85 = ifelse(blwh >= blwh_tresh[[3]],1,0),
+         krill_core_65 = ifelse(krill >= krill_tresh[[1]],1,0),
+         krill_core_75 = ifelse(krill >= krill_tresh[[2]],1,0),
+         krill_core_85 = ifelse(krill >= krill_tresh[[3]],1,0), Area=1)
+
+blwh_cores <- c("blwh_core_65","blwh_core_75","blwh_core_85")
+krill_cores <- c("krill_core_65","krill_core_75","krill_core_85")
+thresholds <- c("65","75","85")
+
+# AO Plots
+par(mfrow=c(3,3))
+for (i in 1:3) { # blwh_tresh
+  for (j in 1:3) { # krill_tresh
+    x <- 7 + i # Column of blwh_core desired
+    y <- 10 + j # Column of krill_core desired
+    AO_plot <- bwkr_metrics_9combo[c(1:7,x,y,14)] %>%
+      rename("blwh_core"=paste0(blwh_cores[[i]]),"krill_core"=paste0(krill_cores[[j]])) %>%
+      group_by(date,year,month) %>% # organize by date
+      summarise(AO=area_overlapfn(prey=krill_core,pred=blwh_core,area=Area)) %>% 
+      pivot_longer(cols=c(AO),names_to="Metric_Name",values_to="Overlap_Metric")
+    boxplot(Overlap_Metric~month,
+            data=AO_plot,
+            xlab="Month Number",
+            ylab="Area Overlap",
+            # main=paste0(thresholds[[j]],"-",thresholds[[i]]),
+            ylim = c(0, 0.30))
+  }
+}
+
+# RO Plots
+par(mfrow=c(3,3))
+for (i in 1:3) { # blwh_tresh
+  for (j in 1:3) { # krill_tresh
+    x <- 7 + i # Column of blwh_core desired
+    y <- 10 + j # Column of krill_core desired
+    
+    RO_plot <- bwkr_metrics_9combo[c(1:7,x,y,14)] %>%
+      rename("blwh_core"=paste0(blwh_cores[[i]]),"krill_core"=paste0(krill_cores[[j]])) %>%
+      group_by(year,month) %>% # organize by date
+      summarise(RO=range_overlapfn(prey=krill_core,pred=blwh_core,area=Area)) %>% 
+      pivot_longer(cols=c(RO),names_to="Metric_Name",values_to="Overlap_Metric")
+    boxplot(Overlap_Metric~month,
+            data=RO_plot,
+            xlab="Month Number",
+            ylab="Range Overlap",
+            # main=paste0(thresholds[[j]],"-",thresholds[[i]]),
+            ylim = c(0, 1))
+  }
+}
+
+dev.off()
+
 # Metrics for thresh: blwh 0.28 + krill 75% -------------------------------
 
 # Matching krill threshold to % blwh above 0.28 threshold and calculating metrics
@@ -405,13 +430,9 @@ bwkr_metrics <- bwkr_all %>% # make new dataframe called dailyzoom2015 which is 
   pivot_longer(cols=c(AO,RO,Schoener,Bhatty),names_to="Metric_Name",values_to="Overlap_Metric") # change the dataframe into long format for easier plotting
 
 AO_all <- filter(bwkr_metrics,Metric_Name=="AO")
-AO_bymonth <- group_by(AO_all,month)
 RO_all <- filter(bwkr_metrics,Metric_Name=="RO")
-RO_bymonth <- group_by(RO_all,month)
 Schoener_all <- filter(bwkr_metrics,Metric_Name=="Schoener")
-Schoener_bymonth <- group_by(Schoener_all,month)
 Bhatty_all <- filter(bwkr_metrics,Metric_Name=="Bhatty")
-Bhatty_bymonth <- group_by(Bhatty_all,month)
 
 # AO Plots
 ggplot(AO_all,aes(x=date,y=Overlap_Metric,group = 1)) +
@@ -419,7 +440,7 @@ ggplot(AO_all,aes(x=date,y=Overlap_Metric,group = 1)) +
   geom_line() +
   ggtitle("AO 1990-2020") +
   ylab("Area Overlap")
-ggplot(AO_bymonth,aes(x=month,y=Overlap_Metric)) +
+ggplot(AO_all,aes(x=month,y=Overlap_Metric,group=month)) +
   geom_boxplot() +
   ggtitle("AO grouped by month") +
   xlab("Month (March-July)") + 
@@ -431,7 +452,7 @@ ggplot(RO_all,aes(x=date,y=Overlap_Metric,group = 1)) +
   geom_line() +
   ggtitle("RO 1990-2020") +
   ylab("Range Overlap")
-ggplot(RO_bymonth,aes(x=month,y=Overlap_Metric)) +
+ggplot(RO_all,aes(x=month,y=Overlap_Metric,group=month)) +
   geom_boxplot() +
   ggtitle("RO grouped by month") +
   xlab("Month (March-July)") + 
@@ -443,7 +464,7 @@ ggplot(Schoener_all,aes(x=date,y=Overlap_Metric,group = 1)) +
   geom_line() +
   ggtitle("Schoener's D 1990-2020") +
   ylab("Schoener's D")
-ggplot(Schoener_bymonth,aes(x=month,y=Overlap_Metric)) +
+ggplot(Schoener_all,aes(x=month,y=Overlap_Metric,group=month)) +
   geom_boxplot() +
   ggtitle("Schoener's D grouped by month") +
   xlab("Month (March-July)") + 
@@ -455,7 +476,7 @@ ggplot(Bhatty_all,aes(x=date,y=Overlap_Metric,group = 1)) +
   geom_line() +
   ggtitle("Bhattacharyya's Coefficient 1990-2020") +
   ylab("Bhattacharyya's Coefficient")
-ggplot(Bhatty_bymonth,aes(x=month,y=Overlap_Metric)) +
+ggplot(Bhatty_all,aes(x=month,y=Overlap_Metric,group=month)) +
   geom_boxplot() +
   ggtitle("Bhattacharyya's Coefficient grouped by month") +
   xlab("Month (March-July)") + 
@@ -463,12 +484,34 @@ ggplot(Bhatty_bymonth,aes(x=month,y=Overlap_Metric)) +
 
 # Visualize area overlap --------------------------------------------------
 
-AO_filtered <- bwkr_all %>% # make new dataframe called dailyzoom2015 which is a copy of sdm2015 and do the following below
+AO_filtered <- data.frame(bwkr_all) %>% # make new dataframe called dailyzoom2015 which is a copy of sdm2015 and do the following below
   mutate(blwh_core = ifelse(blwh >= 0.28,1,0), krill_core = ifelse(krill >= krill_75p_thresh,1,0), Area=1) %>% # create a binary data column for range and area overlap of each species
   filter(blwh_core == 1 & krill_core == 1)
-AO_filtered <- AO_filtered[,-8:-9] %>%
-  filter(month == "06" | month == "07" )
-dates_filtered <- unique(AO_filtered$date)
+
+ggplot(AO_filtered, aes(x=month)) + 
+  geom_histogram(binwidth=1) # Almost all are in June/July
+
+AO_junejuly <- AO_filtered[,-8:-9] %>%
+  filter(month == "6" | month == "7" )
+dates_filtered <- unique(AO_junejuly$date)
+
+ext <- extent(-133.95, -115.55, 30.05, 47.95)
+AO_junejuly_raster <- list()
+for (i in 1:length(dates_filtered)) {
+  AO_rasterprep <- filter(AO_junejuly, date == dates_filtered[[i]])
+  AO_rasterprep <- rasterFromXYZ(AO_rasterprep[,-3:-7]) 
+  AO_junejuly_raster[[i]] <- extend(AO_rasterprep, ext)
+}
+
+
+AO_filtered_t1_ext <- projectRaster(AO_junejuly[[1]], temp, method="bilinear")
+
+AO_filtered_t1_ext <- 
+plot(AO_junejuly_raster[[1]])
+plot(AO_filtered_t1_ext)
+
+
+
 
 
 AO_monthly_raster <- list()
@@ -478,7 +521,8 @@ for (i in 1:length(dates_filtered)) {
   AO_monthly_raster[[i]] <- rasterFromXYZ(AO_rasterprep)
 }
 
-plot(AO_monthly_raster[[43]])
+plot(blwh_monthly_raster[[5]])
+plot(AO_monthly_raster[[1]])
 
 for (i in 1:nrow(sst.rasters)) {
   sst.raster <- raster(sst.rasters$file_paths[i])
@@ -488,3 +532,19 @@ for (i in 1:nrow(sst.rasters)) {
   plot(blwh.raster, alpha=0.5, add=T, breaks=c(0.3,1), legend=F, col=terrain.colors(3))
   dev.off()
 }
+
+r <- raster(xmn=-150, xmx=-120, ymx=60, ymn=30, ncol=36, nrow=18)
+values(r) <- 1:ncell(r)
+
+re <- extend(r, e)
+
+# extend with a number of rows and columns (at each side)
+re2 <- extend(r, c(2,10))
+
+# Extent object
+e <- extent(r)
+e
+extend(e, 10)
+extend(e, 10, -10, 0, 20)
+e + 10
+e * 2
