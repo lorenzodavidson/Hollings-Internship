@@ -1,4 +1,4 @@
-# Libraries ---------------------------------------------------------------
+#Libraries ---------------------------------------------------------------
 suppressPackageStartupMessages(suppressWarnings({
   #library(devtools)
   #devtools::install_github("rspatial/dismo")
@@ -74,18 +74,27 @@ for (t in seq_along(time)) {
     }
   }
   krill_monthly_xyz[[t]] <- data.frame(na.omit(krill_rasterprep)) %>%
-    rename("x" = "X1") %>%
-    rename("y" = "X2") %>%
-    rename("krill" = "X3")
+    rename("x" = "X1","y" = "X2","krill" = "X3")
   #krill_raster <- rasterFromXYZ(krill_rasterprep,crs=CRS("+proj=longlat +datum=WGS84 +ellps=WGS84 +towgs84=0,0,0"))
   #krill_monthly_raster[[t]] <- krill_raster
 }
 
-# Creating bwkr_monthly dataset
-bwkr_monthly <- list()
+# Creating bwkr_monthly_xyz dataset
+bwkr_monthly_xyz <- list()
 for (t in seq_along(time)) {
-  bwkr_monthly[[t]] <- inner_join(blwh_monthly_xyz[[t]],krill_monthly_xyz[[t]]) %>%
+  bwkr_monthly_xyz[[t]] <- inner_join(blwh_monthly_xyz[[t]],krill_monthly_xyz[[t]]) %>%
     rename("blwh" = "layer")
+}
+
+# Creating bwkr_monthly_raster dataset (layer 1 = blwh, layer 2 = krill)
+ext <- extent(-127.45, -115.55, 30.05, 47.95) # Extent of bwkr raster with edges
+
+bwkr_monthly_raster <- list()
+for (t in seq_along(time)) {
+  bwkr_rasterprep <- bwkr_monthly_xyz[[t]][,-5:-7]
+  blwh_raster <- extend(rasterFromXYZ(bwkr_rasterprep[,-4]),ext)
+  krill_raster <- extend(rasterFromXYZ(bwkr_rasterprep[,-3]),ext)
+  bwkr_monthly_raster[[t]] <- stack(blwh_raster,krill_raster)                  
 }
 
 # Creating bwkr_all 
@@ -123,20 +132,21 @@ for (i in 2:155) {
   bwkr_all <- rbind(bwkr_all, bwkr_add)
 }
 
-# Save all 6 datasets as csv or raster files
-fpath_bwkr <- "~/Dropbox/blwh_sst_monthly/blwh_krill/bwkr_monthly"
-fpath_blwh <- "~/Dropbox/blwh_sst_monthly/blwh_krill/blwh_monthly"
-fpath_krill <- "~/Dropbox/blwh_sst_monthly/blwh_krill/krill_monthly"
+# Save all 7 datasets as csv or raster files
+fpath_bwkr <- "~/Dropbox/blwh_krill/bwkr_monthly"
+fpath_blwh <- "~/Dropbox/blwh_krill/blwh_monthly"
+fpath_krill <- "~/Dropbox/blwh_krill/krill_monthly"
 for (i in seq_along(years)) {
   for (j in seq_along(months)) {
     x <- i*5 - 5 + j
-    bwkr_name <- paste0("bwkr_", years[[i]], "_", months[[j]],".csv")
-    write.csv(bwkr_monthly[[x]],paste0(fpath_bwkr,"/",bwkr_name),row.names = FALSE)
+    bwkr_name <- paste0("bwkr_", years[[i]], "_", months[[j]])
+    write.csv(bwkr_monthly[[x]],paste0(fpath_bwkr,"/",bwkr_name,".csv"),row.names = FALSE)
+    writeRaster(bwkr_monthly_raster[[x]],paste0(fpath_bwkr,"/",bwkr_name,".grd"),format = "raster")
     
     blwh_name <- paste0("blwh_", years[[i]], "_", months[[j]])
     write.csv(blwh_monthly_xyz[[x]],paste0(fpath_blwh,"/",blwh_name,".csv"),row.names = FALSE)
     writeRaster(blwh_monthly_raster[[x]],paste0(fpath_blwh,"/",blwh_name,".grd"),format = "raster")
-    
+
     krill_name <- paste0("krill_", years[[i]], "_", months[[j]])
     write.csv(krill_monthly_xyz[[x]],paste0(fpath_krill,"/",krill_name,".csv"),row.names = FALSE)
     writeRaster(krill_monthly_raster[[x]],paste0(fpath_krill,"/",krill_name,".grd"),format = "raster")
@@ -146,9 +156,9 @@ for (i in seq_along(years)) {
 write.csv(bwkr_all,paste0(fpath_bwkr,"/bwkr_all.csv"),row.names = FALSE) # bwkr_all
 
 # Opening whale and krill data --------------------------------------------
-fpath_blwh <- "~/Dropbox/blwh_sst_monthly/blwh_krill/blwh_monthly"
-fpath_krill <- "~/Dropbox/blwh_sst_monthly/blwh_krill/krill_monthly"
-fpath_bwkr <- "~/Dropbox/blwh_sst_monthly/blwh_krill/bwkr_monthly"
+fpath_bwkr <- "~/Dropbox/blwh_krill/bwkr_monthly"
+fpath_blwh <- "~/Dropbox/blwh_krill/blwh_monthly"
+fpath_krill <- "~/Dropbox/blwh_krill/krill_monthly"
 
 dfnames_bwkr <- list.files(fpath_bwkr)
 dfnames_blwh <- list.files(fpath_blwh)
@@ -166,6 +176,12 @@ for(i in dfnames_krill[stringr::str_detect(dfnames_krill, ".grd")]){
   krill_monthly_raster[[i]] <- tt
 }
 
+bwkr_monthly_raster <- list()
+for(i in dfnames_bwkr[stringr::str_detect(dfnames_bwkr, ".grd")]){
+  tt <- raster(paste0(fpath_bwkr,"/",i))
+  bwkr_monthly_raster[[i]] <- tt
+}
+
 blwh_monthly_xyz <- list()
 for(i in dfnames_blwh[stringr::str_detect(dfnames_blwh, ".csv")]){
   tt <- read.csv(paste0(fpath_blwh,"/",i))
@@ -178,10 +194,10 @@ for(i in dfnames_krill[stringr::str_detect(dfnames_krill, ".csv")]){
   krill_monthly_xyz[[i]] <- tt
 }
 
-bwkr_monthly <- list()
+bwkr_monthly_xyz <- list()
 for(i in dfnames_bwkr[stringr::str_detect(dfnames_bwkr, ".csv")]){
   tt <- read.csv(paste0(fpath_bwkr,"/",i))
-  bwkr_monthly[[i]] <- tt
+  bwkr_monthly_xyz[[i]] <- tt
 }
 
 bwkr_all <- read.csv(paste0(fpath_bwkr,"/bwkr_all.csv"))
@@ -247,28 +263,6 @@ bhatta_coeffn <- function(prey, pred) {
   sum(sqrt(p_prey*p_pred), na.rm = T)
 }
 # Initial investigation of threshold values --------------------------------
-
-# Scatter Plots
-library("ggpubr")
-ggscatter(bwkr_t3, x = "krill", y = "blwh", 
-          add = "reg.line", conf.int = TRUE, 
-          cor.coef = TRUE, cor.method = "pearson",
-          xlab = "Krill (CPUE)", ylab = "Blue Whale (HS)") +
-  ggtitle("Blue Whale vs Krill 1990 May")
-
-ggscatter(bwkr_t5, x = "krill", y = "blwh", 
-          add = "reg.line", conf.int = TRUE, 
-          cor.coef = TRUE, cor.method = "pearson",
-          xlab = "Krill (CPUE)", ylab = "Blue Whale (HS)") +
-  ggtitle("Blue Whale vs Krill 1990 July")
-
-# Plotting Pearson's Coefficient for all 155 months
-pcoef <- data.frame(matrix(NA,1,155))
-for (i in 1:155) {
-  pcoef[[i]] <- cor(bwkr_monthly[[i]]$blwh, bwkr_monthly[[i]]$krill, method = 'pearson')
-}
-plot(1:155,pcoef)
-lines(1:155,pcoef)
 
 # Area and Range Overlap vs threshold value
 krill_threshold_t3 <- unname(quantile(bwkr_monthly[[3]]$krill, probs = seq(.01, 1, by = .01)))
@@ -482,36 +476,375 @@ ggplot(Bhatty_all,aes(x=month,y=Overlap_Metric,group=month)) +
   xlab("Month (March-July)") + 
   ylab("Bhattacharyya's Coefficient")
 
-# Visualize area overlap --------------------------------------------------
+# Creating pngs/rasters of area overlap and high blwh HS -------------------
 
-AO_filtered <- data.frame(bwkr_all) %>% # make new dataframe called dailyzoom2015 which is a copy of sdm2015 and do the following below
-  mutate(blwh_core = ifelse(blwh >= 0.28,1,0), krill_core = ifelse(krill >= krill_75p_thresh,1,0), Area=1) %>% # create a binary data column for range and area overlap of each species
-  filter(blwh_core == 1 & krill_core == 1)
+# High blwh HS and AO plots + png
+bwkr_028filter <- data.frame(bwkr_all) %>%
+  mutate(Area=1) %>% 
+  filter(blwh >= 0.28)
 
-ggplot(AO_filtered, aes(x=month)) + 
+AO_028filter <- data.frame(bwkr_all) %>% 
+  mutate(Area=1) %>% 
+  filter(blwh >= 0.28 & krill >= krill_75p_thresh)
+
+ggplot(bwkr_028filter, aes(x=month)) + 
+  geom_histogram(binwidth=1) # Majority are in June/July but ~10% in March/April/May
+ggplot(AO_028filter, aes(x=month)) + 
   geom_histogram(binwidth=1) # Almost all are in June/July
 
-AO_junejuly <- AO_filtered[,-8:-9] %>%
-  filter(month == "6" | month == "7" )
-dates_filtered <- unique(AO_junejuly$date)
+bwkr_junjul_filter <- filter(bwkr_028filter, month == "6" | month == "7" )
+AO_junjul_filter <- filter(AO_028filter, month == "6" | month == "7" )
+dates_filtered <- unique(AO_junjul_filter$date)
 
+# Fix rasters to be same size as original
 ext <- extent(-133.95, -115.55, 30.05, 47.95)
-AO_junejuly_raster <- list()
+
+bwkr_junjul_raster <- list()
+AO_junjul_raster <- list()
 for (i in 1:length(dates_filtered)) {
-  AO_rasterprep <- filter(AO_junejuly, date == dates_filtered[[i]])
+  
+  bwkr_rasterprep <- filter(bwkr_junjul_filter, date == dates_filtered[[i]]) 
+  bwkr_rasterprep <- rasterFromXYZ(bwkr_rasterprep[,-3:-7]) 
+  bwkr_junjul_raster[[i]] <- extend(bwkr_rasterprep, ext)
+  
+  AO_rasterprep <- filter(AO_junjul_filter, date == dates_filtered[[i]])
   AO_rasterprep <- rasterFromXYZ(AO_rasterprep[,-3:-7]) 
-  AO_junejuly_raster[[i]] <- extend(AO_rasterprep, ext)
+  AO_junjul_raster[[i]] <- extend(AO_rasterprep, ext) # For some reason [[5]] becomes 178x185
+}
+
+plot(bwkr_junjul_raster[[48]])
+plot(AO_junjul_raster[[48]])
+
+# Save bwkr_all, bwkr_junjul_filter, and AO_junjul_filter as pngs and rasters
+
+fpath_pngs <- "~/Dropbox/blwh_krill/AO_HS_junjul/pngs/"
+fpath_rasters <- "~/Dropbox/blwh_krill/AO_HS_junjul/rasters/"
+for (i in seq_along(dates_filtered)) {
+  bwkr_file <- bwkr_junjul_raster[[i]]
+  AO_file <- AO_junjul_raster[[i]]
+  name <- paste0("blwhHS_AO_", dates_filtered[[i]])
+
+  png(file = paste0(fpath_pngs,name,".png"))
+  
+  plot(bwkr_file, xlab=as.character(dates_filtered[[i]]), main="Blue Whale HS > 0.28 and Blue Whale-Krill Overlap (Red)", col="#fdbb84")
+  plot(AO_file, add=T, breaks=c(0.3,1), legend=F, col="#e34a33")
+  dev.off()
+}
+
+# Investigating persistence of hotspots -----------------------------------
+fpath_bwkr <- "~/Dropbox/blwh_krill/bwkr_monthly"
+bwkr_all <- read.csv(paste0(fpath_bwkr,"/bwkr_all.csv"))
+bwkr_monthly_raster <- list()
+for(i in dfnames_bwkr[stringr::str_detect(dfnames_bwkr, ".grd")]){
+  tt <- raster(paste0(fpath_bwkr,"/",i))
+  bwkr_monthly_raster[[i]] <- tt
+}
+
+bwkr_junjul <- data.frame(bwkr_all) %>%
+  filter(month == 6 | month == 7) %>%
+  group_by(month)
+bwkr_junjul$month <- as.character(bwkr_junjul$month) # For grouping purposes
+bwkr_jun <- data.frame(bwkr_all) %>%
+  filter(month == 6)
+bwkr_jul <- data.frame(bwkr_all) %>%
+  filter(month == 7)
+
+# Investigating thresholds for blwh and count to show persistence
+ggplot(bwkr_junjul, aes(blwh,color=month)) +
+  geom_freqpoly(binwidth = 0.01,linewidth=1) +
+  xlim(0, 1) +
+  ylim(0,20000) +
+  ggtitle("Monthly Blue Whale HS Frequency")
+
+jun_percentiles <- quantile(bwkr_jun$blwh, probs = c(0.75,0.85,0.95))
+jul_percentiles <- quantile(bwkr_jul$blwh, probs = c(0.75,0.85,0.95))
+
+# Function to filter for months and threshold, group by xy, and count pixels
+thresh_fn <- function(df, time, predprey, thresh) {
+  df_count <- df %>%
+    filter(month == time) %>% # time = month of interest (6 or 7)
+    filter(predprey >= thresh) %>% # predprey is either blwh or krill
+    group_by(x,y) %>%
+    mutate(n=n()) %>%
+    arrange(desc(n))
+  output <- df_count[!duplicated(df_count[,c("x","y")]),]
+}
+
+bwkr_025count <- thresh_fn(bwkr_junjul,7,blwh,0.25)
+
+# July 0.35, 0.55, 0.65, 0.75 and overlaid plot with n > 15
+bwkr_035count_jul <- bwkr_junjul %>%
+  filter(blwh >= 0.35) %>%
+  filter(month == 7) %>%
+  group_by(x,y) %>%
+  mutate(n=n()) %>%
+  arrange(desc(n))
+bwkr_035count_jul <- bwkr_035count_jul[!duplicated(bwkr_035count_jul[ , c("x", "y")]), ]
+
+bwkr_055count_jul <- bwkr_junjul %>%
+  filter(blwh >= 0.55) %>%
+  filter(month == 7) %>%
+  group_by(x,y) %>%
+  mutate(n=n()) %>%
+  arrange(desc(n))
+bwkr_055count_jul <- bwkr_055count_jul[!duplicated(bwkr_055count_jul[ , c("x", "y")]), ]
+
+bwkr_065count_jul <- bwkr_junjul %>%
+  filter(blwh >= 0.65) %>%
+  filter(month == 7) %>%
+  group_by(x,y) %>%
+  mutate(n=n()) %>%
+  arrange(desc(n))
+bwkr_065count_jul <- bwkr_065count_jul[!duplicated(bwkr_065count_jul[ , c("x", "y")]), ]
+
+bwkr_075count_jul <- bwkr_junjul %>%
+  filter(blwh >= 0.75) %>%
+  filter(month == 7) %>%
+  group_by(x,y) %>%
+  mutate(n=n()) %>%
+  arrange(desc(n))
+bwkr_075count_jul <- bwkr_075count_jul[!duplicated(bwkr_075count_jul[ , c("x", "y")]), ]
+
+ext <- extent(-127.45, -115.55, 30.05, 47.95) # Extent of bwkr raster with edges
+bwkr_035count_jul_raster <- extend(rasterFromXYZ(bwkr_035count_jul[c(-3:-7)]),ext)
+bwkr_055count_jul_raster <- extend(rasterFromXYZ(bwkr_055count_jul[c(-3:-7)]),ext)
+bwkr_065count_jul_raster <- extend(rasterFromXYZ(bwkr_065count_jul[c(-3:-7)]),ext)
+bwkr_075count_jul_raster <- extend(rasterFromXYZ(bwkr_075count_jul[c(-3:-7)]),ext)
+
+par(mfrow=c(1,4))
+plot(bwkr_035count_jul_raster,main="blwh > 0.35",cex.main = 1.5,legend=F,
+     axis.args = list(cex.axis = 1.5), cex.axis=1.5,)
+plot(bwkr_055count_jul_raster,main="blwh > 0.55",cex.main = 1.5,legend=F,
+     axis.args = list(cex.axis = 1.5), cex.axis=1.5,)
+plot(bwkr_065count_jul_raster,main="blwh > 0.65",cex.main = 1.5,legend=F,
+     axis.args = list(cex.axis = 1.5), cex.axis=1.5,)
+plot(bwkr_075count_jul_raster,main="blwh > 0.75",cex.main = 1.5,
+     legend.width=2, legend.args=list(text='Count', side=4,font=1, line=2.5, cex=1),
+     axis.args = list(cex.axis = 1.5), cex.axis=1.5,)
+
+plot(bwkr_035count_jul_raster,main="Count of June pixels with blwh > 0.35 threshold")
+plot(bwkr_055count_jul_raster,main="Count of June pixels with blwh > 0.55 threshold")
+plot(bwkr_065count_jul_raster,main="Count of June pixels with blwh > 0.65 threshold")
+plot(bwkr_075count_jul_raster,main="Count of June pixels with blwh > 0.75 threshold")
+
+bwkr_035count_jul_raster[bwkr_035count_jul_raster[] < 15 ] = 0
+bwkr_035count_jul_raster[bwkr_035count_jul_raster >= 15] <- 1
+bwkr_055count_jul_raster[bwkr_055count_jul_raster[] < 15 ] = 0
+bwkr_055count_jul_raster[bwkr_055count_jul_raster >= 15] <- 1
+bwkr_065count_jul_raster[bwkr_065count_jul_raster[] < 15 ] = 0
+bwkr_065count_jul_raster[bwkr_065count_jul_raster >= 15] <- 1
+bwkr_075count_jul_raster[bwkr_075count_jul_raster[] < 15 ] = 0
+bwkr_075count_jul_raster[bwkr_075count_jul_raster >= 15] <- 1
+
+# Plot overlaid 
+dev.off()
+plot(bwkr_035count_jul_raster, main="Blue Whale HS > 0.28 and Blue Whale-Krill Overlap (Red)", col="#ffffb2")
+plot(bwkr_055count_jul_raster, add=T, breaks=c(0.3,1), legend=F, col="#fecc5c")
+plot(bwkr_065count_jul_raster, add=T, breaks=c(0.3,1), legend=F, col="#fd8d3c")
+plot(bwkr_075count_jul_raster, add=T, breaks=c(0.3,1), legend=F, col="#e31a1c")
+
+
+
+
+# 0.25 threshold
+bwkr_025count <- bwkr_junjul %>%
+  filter(blwh >= 0.25) %>%
+  group_by(x,y) %>%
+  mutate(n=n()) %>%
+  arrange(desc(n))
+bwkr_025count <- bwkr_025count[!duplicated(bwkr_025count[ , c("x", "y")]), ]
+bwkr_025count_jun <- bwkr_junjul %>%
+  filter(blwh >= 0.25) %>%
+  filter(month == 6) %>%
+  group_by(x,y) %>%
+  mutate(n=n()) %>%
+  arrange(desc(n))
+bwkr_025count_jun <- bwkr_025count_jun[!duplicated(bwkr_025count_jun[ , c("x", "y")]), ]
+bwkr_025count_jul <- bwkr_junjul %>%
+  filter(blwh >= 0.25) %>%
+  filter(month == 7) %>%
+  group_by(x,y) %>%
+  mutate(n=n()) %>%
+  arrange(desc(n))
+bwkr_025count_jul <- bwkr_025count_jul[!duplicated(bwkr_025count_jul[ , c("x", "y")]), ]
+
+bwkr_025count_raster <- extend(rasterFromXYZ(bwkr_025count[c(-3:-7)]),ext)
+bwkr_025count_jun_raster <- extend(rasterFromXYZ(bwkr_025count_jun[c(-3:-7)]),ext)
+bwkr_025count_jul_raster <- extend(rasterFromXYZ(bwkr_025count_jul[c(-3:-7)]),ext)
+
+# 0.35 threshold
+bwkr_035count <- bwkr_junjul %>%
+  filter(blwh >= 0.35) %>%
+  group_by(x,y) %>%
+  mutate(n=n()) %>%
+  arrange(desc(n))
+bwkr_035count <- bwkr_035count[!duplicated(bwkr_035count[ , c("x", "y")]), ]
+bwkr_035count_jun <- bwkr_junjul %>%
+  filter(blwh >= 0.35) %>%
+  filter(month == 6) %>%
+  group_by(x,y) %>%
+  mutate(n=n()) %>%
+  arrange(desc(n))
+bwkr_035count_jun <- bwkr_035count_jun[!duplicated(bwkr_035count_jun[ , c("x", "y")]), ]
+bwkr_035count_jul <- bwkr_junjul %>%
+  filter(blwh >= 0.35) %>%
+  filter(month == 7) %>%
+  group_by(x,y) %>%
+  mutate(n=n()) %>%
+  arrange(desc(n))
+bwkr_035count_jul <- bwkr_035count_jul[!duplicated(bwkr_035count_jul[ , c("x", "y")]), ]
+
+bwkr_035count_raster <- extend(rasterFromXYZ(bwkr_035count[c(-3:-7)]),ext)
+bwkr_035count_jun_raster <- extend(rasterFromXYZ(bwkr_035count_jun[c(-3:-7)]),ext)
+bwkr_035count_jul_raster <- extend(rasterFromXYZ(bwkr_035count_jul[c(-3:-7)]),ext)
+
+# 0.55 threshold
+bwkr_055count <- bwkr_junjul %>%
+  filter(blwh >= 0.55) %>%
+  group_by(x,y) %>%
+  mutate(n=n()) %>%
+  arrange(desc(n))
+bwkr_055count <- bwkr_055count[!duplicated(bwkr_055count[ , c("x", "y")]), ]
+bwkr_055count_jun <- bwkr_junjul %>%
+  filter(blwh >= 0.55) %>%
+  filter(month == 6) %>%
+  group_by(x,y) %>%
+  mutate(n=n()) %>%
+  arrange(desc(n))
+bwkr_055count_jun <- bwkr_055count_jun[!duplicated(bwkr_055count_jun[ , c("x", "y")]), ]
+bwkr_055count_jul <- bwkr_junjul %>%
+  filter(blwh >= 0.55) %>%
+  filter(month == 7) %>%
+  group_by(x,y) %>%
+  mutate(n=n()) %>%
+  arrange(desc(n))
+bwkr_055count_jul <- bwkr_055count_jul[!duplicated(bwkr_055count_jul[ , c("x", "y")]), ]
+
+bwkr_055count_raster <- extend(rasterFromXYZ(bwkr_055count[c(-3:-7)]),ext)
+bwkr_055count_jun_raster <- extend(rasterFromXYZ(bwkr_055count_jun[c(-3:-7)]),ext)
+bwkr_055count_jul_raster <- extend(rasterFromXYZ(bwkr_055count_jul[c(-3:-7)]),ext)
+
+# Visualize
+
+par(mfrow=c(1,3))
+plot(bwkr_025count_raster,main="Jun/Jul Pixels with blwh > 0.25 threshold",cex.main = 1.5,legend=F,
+     axis.args = list(cex.axis = 1.5), cex.axis=1.5,)
+plot(bwkr_035count_raster,main="Jun/Jul Pixels with blwh > 0.35 threshold",cex.main = 1.5,legend=F,
+     axis.args = list(cex.axis = 1.5), cex.axis=1.5,)
+plot(bwkr_055count_raster,main="Jun/Jul Pixels with blwh > 0.55 threshold",cex.main = 1.5,
+     legend.width=2, legend.args=list(text='Count', side=4,font=1, line=2.5, cex=1),
+     axis.args = list(cex.axis = 1.5), cex.axis=1.5,)
+
+par(mfrow=c(1,3))
+plot(bwkr_025count_jun_raster,main="June pixels with blwh > 0.25 threshold",cex.main = 1.5,legend=F,
+     axis.args = list(cex.axis = 1.5), cex.axis=1.5,)
+plot(bwkr_035count_jun_raster,main="June pixels with blwh > 0.35 threshold",cex.main = 1.5,legend=F,
+     axis.args = list(cex.axis = 1.5), cex.axis=1.5,)
+plot(bwkr_055count_jun_raster,main="June pixels with blwh > 0.55 threshold",cex.main = 1.5,
+     legend.width=2, legend.args=list(text='Count', side=4,font=1, line=2.5, cex=1),
+     axis.args = list(cex.axis = 1.5), cex.axis=1.5,)
+
+par(mfrow=c(1,3))
+plot(bwkr_025count_jul_raster,main="July pixels with blwh > 0.25 threshold",cex.main = 1.5,legend=F,
+     axis.args = list(cex.axis = 1.5), cex.axis=1.5,)
+plot(bwkr_035count_jul_raster,main="July pixels with blwh > 0.35 threshold",cex.main = 1.5,legend=F,
+     axis.args = list(cex.axis = 1.5), cex.axis=1.5,)
+plot(bwkr_055count_jul_raster,main="July pixels with blwh > 0.55 threshold",cex.main = 1.5,
+     legend.width=2, legend.args=list(text='Count', side=4,font=1, line=2.5, cex=1),
+     axis.args = list(cex.axis = 1.5), cex.axis=1.5,)
+
+par(mfrow=c(1,3))
+plot(bwkr_025count_jun_raster,main="Count of June pixels with blwh > 0.25 threshold")
+plot(bwkr_035count_jun_raster,main="Count of June pixels with blwh > 0.35 threshold")
+plot(bwkr_055count_jun_raster,main="Count of June pixels with blwh > 0.55 threshold")
+
+par(mfrow=c(1,3))
+plot(bwkr_025count_jul_raster,main="Count of July pixels with blwh > 0.25 threshold")
+plot(bwkr_035count_jul_raster,main="Count of July pixels with blwh > 0.35 threshold")
+plot(bwkr_055count_jul_raster,main="Count of July pixels with blwh > 0.55 threshold")
+
+
+bwkr_025count <- bwkr_025count$n[order()]
+bwkr_035count
+bwkr_055count
+
+
+bwkr_025_raster <- list() # ~72%
+bwkr_035_raster <- list() # ~80%
+bwkr_055_raster <- list() # ~90%
+ext <- extent(-133.95, -115.55, 30.05, 47.95)
+for(i in seq_along(dates_filtered)){
+  bwkr_025_prep <- filter(bwkr_junjul, date == dates_filtered[[i]]) %>%
+                   filter(blwh >= 0.25)
+  bwkr_035_prep <- filter(bwkr_junjul, date == dates_filtered[[i]]) %>%
+                   filter(blwh >= 0.35)
+  bwkr_055_prep <- filter(bwkr_junjul, date == dates_filtered[[i]]) %>%
+                   filter(blwh >= 0.55)
+  
+  bwkr_025_prep <- rasterFromXYZ(bwkr_025_prep[c(-4:-7)])
+  bwkr_035_prep <- rasterFromXYZ(bwkr_035_prep[c(-4:-7)])
+  bwkr_055_prep <- rasterFromXYZ(bwkr_055_prep[c(-4:-7)])
+  
+  bwkr_025_prep <- extend(bwkr_025_prep, ext)
+  bwkr_035_prep <- extend(bwkr_035_prep, ext)
+  bwkr_055_prep <- extend(bwkr_055_prep, ext)
+  
+  bwkr_025_raster[[i]] <- bwkr_025_prep
+  bwkr_035_raster[[i]] <- bwkr_035_prep
+  bwkr_055_raster[[i]] <- bwkr_055_prep
 }
 
 
-AO_filtered_t1_ext <- projectRaster(AO_junejuly[[1]], temp, method="bilinear")
-
-AO_filtered_t1_ext <- 
-plot(AO_junejuly_raster[[1]])
-plot(AO_filtered_t1_ext)
 
 
 
+
+
+
+bwkr_025all_raster <- bwkr_025_raster[[1]]
+bwkr_035all_raster <- bwkr_035_raster[[1]]
+bwkr_055all_raster <- bwkr_055_raster[[1]]
+for (i in 2:62) {
+  a
+  b
+  c
+  bwkr_025all_raster <- c(bwkr_025all_raster,bwkr_025_raster[[i]])
+  bwkr_035all_raster <- c(bwkr_025all_raster,bwkr_025_raster[[i]])
+  bwkr_055all_raster <- c(bwkr_025all_raster,bwkr_025_raster[[i]])
+}
+
+a <- rast(bwkr_025_raster[[1]])
+setValues(a, bwkr_025_raster[[1]], keeptime=TRUE, keepunits=TRUE, keepnames=FALSE, props=FALSE)
+b <- rast(bwkr_025_raster[[2]])
+setValues(b, bwkr_025_raster[[2]], keeptime=TRUE, keepunits=TRUE, keepnames=FALSE, props=FALSE)
+
+ab <- c(a,b)
+
+# Visualizing relationship between blwh and krill -------------------------
+ggplot(AO_junejuly) +
+  geom_point()
+
+# Scatter Plots
+library("ggpubr")
+ggscatter(bwkr_t3, x = "krill", y = "blwh", 
+          add = "reg.line", conf.int = TRUE, 
+          cor.coef = TRUE, cor.method = "pearson",
+          xlab = "Krill (CPUE)", ylab = "Blue Whale (HS)") +
+  ggtitle("Blue Whale vs Krill 1990 May")
+
+ggscatter(bwkr_t5, x = "krill", y = "blwh", 
+          add = "reg.line", conf.int = TRUE, 
+          cor.coef = TRUE, cor.method = "pearson",
+          xlab = "Krill (CPUE)", ylab = "Blue Whale (HS)") +
+  ggtitle("Blue Whale vs Krill 1990 July")
+
+# Plotting Pearson's Coefficient for all 155 months
+pcoef <- data.frame(matrix(NA,1,155))
+for (i in 1:155) {
+  pcoef[[i]] <- cor(bwkr_monthly[[i]]$blwh, bwkr_monthly[[i]]$krill, method = 'pearson')
+}
+plot(1:155,pcoef)
+lines(1:155,pcoef)
 
 
 AO_monthly_raster <- list()
@@ -524,27 +857,8 @@ for (i in 1:length(dates_filtered)) {
 plot(blwh_monthly_raster[[5]])
 plot(AO_monthly_raster[[1]])
 
-for (i in 1:nrow(sst.rasters)) {
-  sst.raster <- raster(sst.rasters$file_paths[i])
-  blwh.raster <- raster(whale.rasters$file_paths[i])
-  png(file = paste0("C:/Users/kaila/Dropbox/Monthly Hindcast Blue Whale Data 1981-2021/combined/", as.character(sst.rasters$year[i]), ".", as.character(sst.rasters$month[i]), ".png"))
-  plot(sst.raster, xlab=as.character(sst.rasters$year[i]), main="Sea Surface Temperature and Blue Whale Habitat Suitability > 0.3 (Green)", col=grey(1:50/50))
-  plot(blwh.raster, alpha=0.5, add=T, breaks=c(0.3,1), legend=F, col=terrain.colors(3))
-  dev.off()
-}
+# All data
 
-r <- raster(xmn=-150, xmx=-120, ymx=60, ymn=30, ncol=36, nrow=18)
-values(r) <- 1:ncell(r)
+# Data in high blwh HS 0.28 (and 0.45?)
 
-re <- extend(r, e)
-
-# extend with a number of rows and columns (at each side)
-re2 <- extend(r, c(2,10))
-
-# Extent object
-e <- extent(r)
-e
-extend(e, 10)
-extend(e, 10, -10, 0, 20)
-e + 10
-e * 2
+# Data in AO at blwh 0.28 and krill 75%
