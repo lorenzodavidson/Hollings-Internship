@@ -587,10 +587,10 @@ bwkr_junjul <- data.frame(bwkr_all) %>%
 # Function to filter for months and threshold, group by xy, and count pixels
 thresh_fn <- function(df, time, thresh) {
   df_count <- df %>%
-    filter(month == time) %>% # time = month of interest (6 and/or 7)
+    filter(monthnum == time) %>% # time = month of interest ("6","7" or "8")
     filter(blwh >= thresh) %>%
     group_by(x,y) %>%
-    mutate(n=n()) %>%
+    mutate(n=n()/31) %>%
     arrange(desc(n))
   output <- df_count[!duplicated(df_count[,c("x","y")]),]
 }
