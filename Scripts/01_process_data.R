@@ -117,71 +117,61 @@ for (i in 2:155) {
 # Creating final blwh and krill raster datasets  --------------------------
 ext <- extent(-127.5, -115.5, 30, 48) # Extent of bwkr raster with edges
 
-blwh_comb_raster <- stack() # Stack of 155 rasters containing only bwkr shared datapoints
-krill_comb_raster <- stack()
+blwh_all_raster <- stack() # Stack of 155 rasters containing only bwkr shared datapoints
+krill_all_raster <- stack()
 for (t in seq_along(dates)) {
   bwkr_rasterprep <- bwkr_monthly_xyz[[t]][,-5:-7]
   if (t ==1) {
-    blwh_comb_raster <- extend(rasterFromXYZ(bwkr_rasterprep[,-4]),ext)
-    krill_comb_raster <- extend(rasterFromXYZ(bwkr_rasterprep[,-3]),ext)
+    blwh_all_raster <- extend(rasterFromXYZ(bwkr_rasterprep[,-4]),ext)
+    krill_all_raster <- extend(rasterFromXYZ(bwkr_rasterprep[,-3]),ext)
   } else {
     blwh_raster <- extend(rasterFromXYZ(bwkr_rasterprep[,-4]),ext)
     krill_raster <- extend(rasterFromXYZ(bwkr_rasterprep[,-3]),ext)
-    blwh_comb_raster <- stack(blwh_comb_raster, blwh_raster)
-    krill_comb_raster <- stack(krill_comb_raster, krill_raster)  
+    blwh_all_raster <- stack(blwh_all_raster, blwh_raster)
+    krill_all_raster <- stack(krill_all_raster, krill_raster)  
   }
 }
-blwh_comb_raster <- setZ(blwh_comb_raster, dates)
-krill_comb_raster <- setZ(krill_comb_raster, dates)
+blwh_all_raster <- setZ(blwh_all_raster, dates)
+krill_all_raster <- setZ(krill_all_raster, dates)
 
 # Monthly raster stacks (31 layers each)
-blwh_apr_raster <- stack()
-krill_apr_raster <- stack()
-blwh_may_raster <- stack()
-krill_may_raster <- stack()
-blwh_jun_raster <- stack()
-krill_jun_raster <- stack()
-blwh_jul_raster <- stack()
-krill_jul_raster <- stack()
-blwh_aug_raster <- stack()
-krill_aug_raster <- stack()
+blwh_apr_raster <- stack(); krill_apr_raster <- stack()
+blwh_may_raster <- stack(); krill_may_raster <- stack()
+blwh_jun_raster <- stack(); krill_jun_raster <- stack()
+blwh_jul_raster <- stack(); krill_jul_raster <- stack()
+blwh_aug_raster <- stack(); krill_aug_raster <- stack()
 
-apr <- seq(1,151,by=5)
-may <- seq(2,152,by=5)
-jun <- seq(3,153,by=5)
-jul <- seq(4,154,by=5)
-aug <- seq(5,155,by=5)
+apr <- seq(1,151,by=5); may <- seq(2,152,by=5); jun <- seq(3,153,by=5)
+jul <- seq(4,154,by=5); aug <- seq(5,155,by=5)
 
-for (i in 1:31) {
-  apr <- 5*i-4; may <- 5*i-3; jun <- 5*i-2; jul <- 5*i-1; aug <- 5*i
-  jun_raster <- bwkr_monthly_raster[[jun]]
-  jul_raster <- bwkr_monthly_raster[[jul]]
-  bwkr_jun_stacked <- stack(bwkr_jun_stacked,jun_raster)
-  bwkr_jul_stacked <- stack(bwkr_jul_stacked,jul_raster)
-  bwkr_junjul_stacked <- stack(bwkr_junjul_stacked,jun_raster,jul_raster)
-}
+blwh_apr_raster <- subset(blwh_all_raster, apr)
+krill_apr_raster <- subset(krill_all_raster, apr)
+blwh_may_raster <- subset(blwh_all_raster, may)
+krill_may_raster <- subset(krill_all_raster, may)
+blwh_jun_raster <- subset(blwh_all_raster, jun)
+krill_jun_raster <- subset(krill_all_raster, jun)
+blwh_jul_raster <- subset(blwh_all_raster, jul)
+krill_jul_raster <- subset(krill_all_raster, jul)
+blwh_aug_raster <- subset(blwh_all_raster, aug)
+krill_aug_raster <- subset(krill_all_raster, aug)
 
 
+# Save bwkr_all, blwh_all_raster, krill_all_raster, and monthly  --------
 
-# Save all 7 datasets as csv or raster files
-fpath_bwkr <- "~/Dropbox/blwh_krill/bwkr_monthly"
-fpath_blwh <- "~/Dropbox/blwh_krill/blwh_monthly"
-fpath_krill <- "~/Dropbox/blwh_krill/krill_monthly"
-for (i in seq_along(years)) {
-  for (j in seq_along(months)) {
-    x <- i*5 - 5 + j
-    bwkr_name <- paste0("bwkr_", years[[i]], "_", months[[j]])
-    write.csv(bwkr_monthly[[x]],paste0(fpath_bwkr,"/",bwkr_name,".csv"),row.names = FALSE)
-    writeRaster(bwkr_monthly_raster[[x]],paste0(fpath_bwkr,"/",bwkr_name,".grd"),format = "raster")
-    
-    blwh_name <- paste0("blwh_", years[[i]], "_", months[[j]])
-    write.csv(blwh_monthly_xyz[[x]],paste0(fpath_blwh,"/",blwh_name,".csv"),row.names = FALSE)
-    writeRaster(blwh_monthly_raster[[x]],paste0(fpath_blwh,"/",blwh_name,".grd"),format = "raster")
-    
-    krill_name <- paste0("krill_", years[[i]], "_", months[[j]])
-    write.csv(krill_monthly_xyz[[x]],paste0(fpath_krill,"/",krill_name,".csv"),row.names = FALSE)
-    writeRaster(krill_monthly_raster[[x]],paste0(fpath_krill,"/",krill_name,".grd"),format = "raster")
-  }
-}
+processed_path <- "~Dropbox/processed_data/"
 
-write.csv(bwkr_all,paste0(fpath_bwkr,"/bwkr_all.csv"),row.names = FALSE) # bwkr_all
+write.csv(bwkr_all_xyz,paste0(processed_path,"bwkr_all.csv"),row.names = FALSE) # bwkr_all
+writeRaster(blwh_all_raster,paste0(processed_path,"blwh_all_raster.grd"),format = "raster")
+writeRaster(krill_all_raster,paste0(processed_path,"krill_all_raster.grd"),format = "raster")
+
+# Monthly
+writeRaster(blwh_apr_raster,paste0(processed_path,"blwh_apr_raster.grd"),format = "raster")
+writeRaster(krill_apr_raster,paste0(processed_path,"krill_apr_raster.grd"),format = "raster")
+writeRaster(blwh_may_raster,paste0(processed_path,"blwh_may_raster.grd"),format = "raster")
+writeRaster(krill_may_raster,paste0(processed_path,"krill_may_raster.grd"),format = "raster")
+writeRaster(blwh_jun_raster,paste0(processed_path,"blwh_jun_raster.grd"),format = "raster")
+writeRaster(krill_jun_raster,paste0(processed_path,"krill_jun_raster.grd"),format = "raster")
+writeRaster(blwh_jul_raster,paste0(processed_path,"blwh_jul_raster.grd"),format = "raster")
+writeRaster(krill_jul_raster,paste0(processed_path,"krill_jul_raster.grd"),format = "raster")
+writeRaster(blwh_aug_raster,paste0(processed_path,"blwh_aug_raster.grd"),format = "raster")
+writeRaster(krill_aug_raster,paste0(processed_path,"krill_aug_raster.grd"),format = "raster")
