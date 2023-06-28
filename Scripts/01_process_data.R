@@ -42,6 +42,7 @@ tt <- ncvar_get(totalkrill, "Time")
 dates <- as.Date(as.POSIXct(tt, tz = "GMT", origin = "1970-01-01"))
 years <- year(dates)
 months <- month.abb[as.numeric(month(dates))]
+monthnums <- as.numeric(month(dates))
 dates <- format(dates,"%Y-%m")
 TotalKrill_CPUE <- ncvar_get(totalkrill, "TotalKrill_CPUE")
 
@@ -84,7 +85,7 @@ krill_monthly_raster <- list()
 krill_monthly_xyz <- list()
 for (t in seq_along(dates)) {
   month_nc <- dates[[t]]
-  # krill_monthly_raster[[t]] <- create_ROMS_RASTER(nc,dname,month_nc,temp)
+  krill_monthly_raster[[t]] <- create_ROMS_RASTER(nc,dname,month_nc,temp)
   
   krill_monthly_xyz[[t]] <- data.frame(na.omit(rasterToPoints(krill_monthly_raster[[t]]))) %>%
     rename("lon"="x","lat"="y","krill"="layer")
@@ -101,11 +102,13 @@ bwkr_all_xyz <- data.frame(bwkr_monthly_xyz[[1]])
 bwkr_all_xyz$date <- dates[[1]]
 bwkr_all_xyz$year <- years[[1]]
 bwkr_all_xyz$month <- months[[1]]
+bwkr_all_xyz$monthnum <- monthnums[[1]]
 for (i in 2:155) {
   bwkr_add <- bwkr_monthly_xyz[[i]]
   bwkr_add$date <- dates[[i]]
   bwkr_add$year <- years[[i]]
   bwkr_add$month <- months[[i]]
+  bwkr_add$monthnum <- monthnums[[i]]
   bwkr_all_xyz <- rbind(bwkr_all_xyz, bwkr_add)
 }
 
