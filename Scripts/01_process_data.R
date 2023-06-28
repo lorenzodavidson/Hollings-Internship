@@ -35,20 +35,14 @@ for (i in dfnames) {
 
 # Open krill netCDF file into xyz and raster format --------
 
-totalkrill <- nc_open("~/Dropbox/krill_raw/TotalKril_CPUE.nc")
-lon <- round(ncvar_get(totalkrill, "Longitude"),digits = 2)
-lat <- round(ncvar_get(totalkrill, "Latitude"),digits = 2)
-time <- anytime(ncvar_get(totalkrill, "Time"))
-TotalKrill_CPUE <- ncvar_get(totalkrill, "TotalKrill_CPUE")
-
 totalkrill <- nc_open("~/Dropbox/krill_raw/TotalKril_CPUE.nc", write = TRUE)
 lon <- ncvar_get(totalkrill, "Longitude")
 lat <- ncvar_get(totalkrill, "Latitude", verbose = F)
 tt <- ncvar_get(totalkrill, "Time")
 dates <- as.Date(as.POSIXct(tt, tz = "GMT", origin = "1970-01-01"))
-dates <- format(dates,"%Y-%m")
 years <- year(dates)
 months <- month.abb[as.numeric(month(dates))]
+dates <- format(dates,"%Y-%m")
 TotalKrill_CPUE <- ncvar_get(totalkrill, "TotalKrill_CPUE")
 
 # Function to create raster from netCDF
@@ -57,10 +51,11 @@ create_ROMS_RASTER=function(nc,dname,month_nc,template){ #nc file, name of varia
   lat <- ncvar_get(nc.data,'Latitude')
   lon <- ncvar_get(nc.data,'Longitude')
   nrows <- length(lat); ncols <- length(lon)
-  tim <- format(as.Date(mondate(anytime(ncvar_get(nc.data,'Time')))), "%Y-%m")
+  tt <- ncvar_get(totalkrill, "Time")
+  dates <- format(as.Date(as.POSIXct(tt, tz = "GMT", origin = "1970-01-01")),"%Y-%m")
   tmp.array <- ncvar_get(nc.data, dname)
   fillvalue <- ncatt_get(nc.data, dname, "_FillValue")
-  names=unlist(lapply(tim,function(x)gsub(" UTC","",x)))
+  names=unlist(lapply(dates,function(x)gsub(" UTC","",x)))
   index=grep(month_nc,names)
   
   # Create rasters
@@ -89,10 +84,10 @@ krill_monthly_raster <- list()
 krill_monthly_xyz <- list()
 for (t in seq_along(dates)) {
   month_nc <- dates[[t]]
-  krill_monthly_raster[[t]] <- create_ROMS_RASTER(nc,dname,month_nc,temp)
+  # krill_monthly_raster[[t]] <- create_ROMS_RASTER(nc,dname,month_nc,temp)
   
   krill_monthly_xyz[[t]] <- data.frame(na.omit(rasterToPoints(krill_monthly_raster[[t]]))) %>%
-    rename("lon" = "x", "lat" = "y", "krill" = "layer")
+    rename("lon"="x","lat"="y","krill"="layer")
 }
 
 # Creating bwkr_monthly_xyz and bwkr_all datasets --------------------------
@@ -158,7 +153,7 @@ krill_aug_raster <- subset(krill_all_raster, aug)
 
 # Save bwkr_all, blwh_all_raster, krill_all_raster, and monthly  --------
 
-processed_path <- "~Dropbox/processed_data/"
+processed_path <- "~/Desktop/Hollingsinternship/Hollings-Internship/Processed/"
 
 write.csv(bwkr_all_xyz,paste0(processed_path,"bwkr_all.csv"),row.names = FALSE) # bwkr_all
 writeRaster(blwh_all_raster,paste0(processed_path,"blwh_all_raster.grd"),format = "raster")
