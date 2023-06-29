@@ -139,7 +139,7 @@ p2 <- levelplot(krill_678_mean,main = "Mean Monthly Krill CPUE",par.settings = m
       latticeExtra::layer(sp.polygons(world_land, fill="gray80"))
 grid.arrange(p1, p2, ncol=1)
 
-# Investigating persistence of hot spots ----------------------------------
+# Reoccurrence of blue whale core habitat ---------------------------------
 
 # Function to filter for months and threshold, group by xy, and calculate % of years
 thresh_fn <- function(df, time, thresh) {
@@ -159,12 +159,12 @@ raster_fn <- function(df, ext) {
 }
 
 blwh_percentiles <- unname(quantile(filter(bwkr_bymonth, monthnum == "6" | monthnum == "7" | monthnum == "8")$blwh, 
-                probs = c(0.35,0.45,0.55,0.65,0.75,0.85,0.95,1)))
+                probs = c(0.55,0.65,0.75,0.85,0.95)))
 
 blwh_jun_count <- stack()
 blwh_jul_count <- stack()
 blwh_aug_count <- stack()
-for (i in 3:7) {
+for (i in 1:length(blwh_percentiles)) {
   blwh_jun_prep <- raster_fn(thresh_fn(bwkr_bymonth,"6",blwh_percentiles[[i]]),ext)
   blwh_jun_count <- stack(blwh_jun_count,blwh_jun_prep)
   
@@ -179,9 +179,6 @@ thresholds <- c("55th Percentile","65th Percentile","75th Percentile","85th Perc
 blwh_jun_count <- setZ(blwh_jun_count, paste0(thresholds))
 blwh_jul_count <- setZ(blwh_jul_count, paste0(thresholds))
 blwh_aug_count <- setZ(blwh_aug_count, paste0(thresholds))
-names(blwh_jun_count) <- paste0(thresholds)
-names(blwh_jul_count) <- paste0(thresholds)
-names(blwh_aug_count) <- paste0(thresholds)
 
 myTheme <- rasterTheme(region = brewer.pal(9,"YlOrRd"),panel.background = list(col = 'lightblue'))
 
@@ -200,6 +197,49 @@ plt <- levelplot(blwh_aug_count,main = "Percent Augusts above Blue Whale HS Thre
                  names.attr=as.character(thresholds), par.settings = myTheme)
 plt + latticeExtra::layer(sp.polygons(world_land, fill="gray80"))
 
+# Persistence of blue whale core habitat ------------------------------------
+
+# Function that turns pixels with <50% to NA and >50% to threshold value
+library(terra)
+
+blwh_percentiles <- unname(quantile(filter(bwkr_bymonth, monthnum == "6" | monthnum == "7" | monthnum == "8")$blwh, 
+                                    probs = c(0.55,0.65,0.75,0.85,0.95)))
+
+binary_fn <- function(raster,percentiles) {
+  raster_binary <- as(raster, "SpatRaster")
+  raster_binary <- app(raster_binary, fun=function(x){ x[x <= 50] <- NA; return(x)})
+  raster_binary <- app(raster_binary, fun=function(x){ x[x > 50] <- 1; return(x)})
+  
+  for (i in seq_along(blwh_percentiles)) {
+    raster_binary[[i]] <- app(raster_binary[[i]], fun=function(x){ x[x == 1] <- percentiles[[i]]; return(x)})
+  }
+  
+  output <- cover(raster_binary[[5]],raster_binary[[4]])
+  output <- cover(output,raster_binary[[3]])
+  output <- cover(output,raster_binary[[2]])
+  output <- cover(output,raster_binary[[1]])
+  output <- raster(output)
+}
+
+# Creating 1 raster with persistent hot spots above each threshold
+
+blwh_jun_binary <- binary_fn(blwh_jun_count,blwh_percentiles)
+blwh_jul_binary <- binary_fn(blwh_jul_count,blwh_percentiles)
+blwh_aug_binary <- binary_fn(blwh_aug_count,blwh_percentiles)
+
+blwh_breaks <- c((blwh_percentiles-0.01),1)
+
+plt <- levelplot(blwh_jun_binary,main = "Persistently High Blue Whale HS Pixels (June)",
+                 par.settings = myTheme, at = blwh_breaks)
+plt + latticeExtra::layer(sp.polygons(world_land, fill="gray80"))
+
+plt <- levelplot(blwh_jul_binary,main = "Persistently High Blue Whale HS Pixels (July)",
+                 par.settings = myTheme, at = blwh_breaks)
+plt + latticeExtra::layer(sp.polygons(world_land, fill="gray80"))
+
+plt <- levelplot(blwh_aug_binary,main = "Persistently High Blue Whale HS Pixels (August)",
+                 par.settings = myTheme, at = blwh_breaks)
+plt + latticeExtra::layer(sp.polygons(world_land, fill="gray80"))
 
 # Overlap Metrics Code ----------------------------------------------------
 
