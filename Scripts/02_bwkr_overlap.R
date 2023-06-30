@@ -34,31 +34,60 @@ suppressPackageStartupMessages(suppressWarnings({
 # Open files --------------------------------------------------------------
 
 processed_path <- "~/Desktop/Hollingsinternship/Hollings-Internship/Processed/"
-
 bwkr_all <- read.csv(paste0(processed_path,"/bwkr_all.csv"))
+dates <- read.csv(paste0(processed_path,"/dates.csv"))
 
-blwh_all_raster <- raster(paste0(processed_path,"blwh_all_raster.grd"))
-krill_all_raster <- raster(paste0(processed_path,"krill_all_raster.grd"))
+# Created stacked rasters for complete set
 
-blwh_apr_raster <- raster(paste0(processed_path,"blwh_apr_raster.grd"))
-blwh_may_raster <- raster(paste0(processed_path,"blwh_may_raster.grd"))
-blwh_jun_raster <- raster(paste0(processed_path,"blwh_jun_raster.grd"))
-blwh_jul_raster <- raster(paste0(processed_path,"blwh_jul_raster.grd"))
-blwh_aug_raster <- raster(paste0(processed_path,"blwh_aug_raster.grd"))
+blwh_path <- paste0(processed_path,"blwh_all/")
+krill_path <- paste0(processed_path,"krill_all/")
+blwh_names <- list.files(blwh_path)
+krill_names <- list.files(krill_path)
+blwh_names <- list.files(blwh_path)[stringr::str_detect(blwh_names,".grd")]
+krill_names <- list.files(krill_path)[stringr::str_detect(krill_names,".grd")]
 
-krill_apr_raster <- raster(paste0(processed_path,"krill_apr_raster.grd"))
-krill_may_raster <- raster(paste0(processed_path,"krill_may_raster.grd"))
-krill_jun_raster <- raster(paste0(processed_path,"krill_jun_raster.grd"))
-krill_jul_raster <- raster(paste0(processed_path,"krill_jul_raster.grd"))
-krill_aug_raster <- raster(paste0(processed_path,"krill_aug_raster.grd"))
+blwh_all_raster <- stack() # Stack of 155 layers (31 years)
+for (i in blwh_names) {
+  raster <- raster(paste0(blwh_path,"/",i))
+  blwh_all_raster <- stack(blwh_all_raster,raster)
+}
+blwh_all_raster <- setZ(blwh_all_raster, dates)
+
+krill_all_raster <- stack()
+for (i in krill_names) {
+  raster <- raster(paste0(krill_path,"/",i))
+  krill_all_raster <- stack(krill_all_raster,raster)
+}
+krill_all_raster <- setZ(krill_all_raster, dates)
+
+# Monthly raster stacks (31 layers each)
+blwh_apr_raster <- stack(); krill_apr_raster <- stack()
+blwh_may_raster <- stack(); krill_may_raster <- stack()
+blwh_jun_raster <- stack(); krill_jun_raster <- stack()
+blwh_jul_raster <- stack(); krill_jul_raster <- stack()
+blwh_aug_raster <- stack(); krill_aug_raster <- stack()
+
+apr <- seq(1,151,by=5); may <- seq(2,152,by=5); jun <- seq(3,153,by=5)
+jul <- seq(4,154,by=5); aug <- seq(5,155,by=5)
+
+blwh_apr_raster <- subset(blwh_all_raster, apr)
+krill_apr_raster <- subset(krill_all_raster, apr)
+blwh_may_raster <- subset(blwh_all_raster, may)
+krill_may_raster <- subset(krill_all_raster, may)
+blwh_jun_raster <- subset(blwh_all_raster, jun)
+krill_jun_raster <- subset(krill_all_raster, jun)
+blwh_jul_raster <- subset(blwh_all_raster, jul)
+krill_jul_raster <- subset(krill_all_raster, jul)
+blwh_aug_raster <- subset(blwh_all_raster, aug)
+krill_aug_raster <- subset(krill_all_raster, aug)
 
 # Freq plot by month -----------------------------------------------------
 
 months <- c('Apr', 'May', 'Jun', 'Jul', 'Aug')
-bwkr_bymonth <- data.frame(group_by(bwkr_all,monthnum))
-bwkr_bymonth$monthnum <- as.character(bwkr_bymonth$monthnum)
+bwkr_bymonth <- data.frame(group_by(bwkr_all,month))
+bwkr_bymonth$month <- as.character(bwkr_bymonth$month)
 
-ggplot(bwkr_bymonth, aes(blwh,color=monthnum)) +
+ggplot(bwkr_bymonth, aes(blwh,color=month)) +
   geom_freqpoly(binwidth = 0.01,linewidth=1) +
   xlim(0, 1) +
   ylim(0,20000) +
@@ -67,7 +96,7 @@ ggplot(bwkr_bymonth, aes(blwh,color=monthnum)) +
        y = "Count",
        color = "Months")
 
-ggplot(bwkr_bymonth, aes(krill,color=monthnum)) +
+ggplot(bwkr_bymonth, aes(krill,color=month)) +
   geom_freqpoly(binwidth = 0.03,linewidth=1) +
   xlim(range(bwkr_bymonth$krill)[[1]], range(bwkr_bymonth$krill)[[2]]) +
   ggtitle("Monthly Krill CPUE Frequency") +
@@ -118,17 +147,20 @@ plt + latticeExtra::layer(sp.polygons(world_land, fill="gray80"))
 plt <- levelplot(krill_all_mean,main = "Mean Monthly Krill CPUE",par.settings = myTheme,at = krill_breaks)
 plt + latticeExtra::layer(sp.polygons(world_land, fill="gray80"))
 
-
 # June, July and August blue whale and krill comparison --------------------
+
+months <- c('Apr', 'May', 'Jun', 'Jul', 'Aug')
+bwkr_bymonth <- data.frame(group_by(bwkr_all,month))
+bwkr_bymonth$month <- as.character(bwkr_bymonth$month)
 
 blwh_678_mean <- subset(blwh_all_mean,3:5)
 krill_678_mean <- subset(krill_all_mean,3:5)
 
-blwh_breaks <- unname(quantile(filter(bwkr_bymonth, monthnum == "6" | monthnum == "7" | monthnum == "8")$blwh, 
+blwh_breaks <- unname(quantile(filter(bwkr_bymonth, month == "6" | month == "7" | month == "8")$blwh, 
                                probs = c(0.35,0.45,0.55,0.65,0.75,0.85,0.95,1)))
 blwh_breaks <- c(0, blwh_breaks)
 
-krill_breaks <- unname(quantile(filter(bwkr_bymonth, monthnum == "6" | monthnum == "7" | monthnum == "8")$krill, 
+krill_breaks <- unname(quantile(filter(bwkr_bymonth, month == "6" | month == "7" | month == "8")$krill, 
                                 probs = c(0.35,0.45,0.55,0.65,0.75,0.85,0.95,1)))
 krill_breaks <- c(0,krill_breaks)
 
@@ -144,7 +176,7 @@ grid.arrange(p1, p2, ncol=1)
 # Function to filter for months and threshold, group by xy, and calculate % of years
 thresh_fn <- function(df, time, thresh) {
   df_count <- df %>%
-    filter(monthnum == time) %>% # time = month of interest ("6","7" or "8")
+    filter(month == time) %>% # time = month of interest ("6","7" or "8")
     filter(blwh > thresh) %>%
     group_by(lon,lat) %>%
     mutate(n=n()/0.31) %>%
@@ -158,7 +190,7 @@ raster_fn <- function(df, ext) {
   extend(rasterFromXYZ(df[c(-3:-8)]),ext)
 }
 
-blwh_percentiles <- unname(quantile(filter(bwkr_bymonth, monthnum == "6" | monthnum == "7" | monthnum == "8")$blwh, 
+blwh_percentiles <- unname(quantile(filter(bwkr_bymonth, month == "6" | month == "7" | month == "8")$blwh, 
                 probs = c(0.55,0.65,0.75,0.85,0.95)))
 
 blwh_jun_count <- stack()
@@ -197,12 +229,12 @@ plt <- levelplot(blwh_aug_count,main = "Percent Augusts above Blue Whale HS Thre
                  names.attr=as.character(thresholds), par.settings = myTheme)
 plt + latticeExtra::layer(sp.polygons(world_land, fill="gray80"))
 
-# Persistence of blue whale core habitat ------------------------------------
+# Plot persistent blue whale core habitat above thresholds -----------------
 
 # Function that turns pixels with <50% to NA and >50% to threshold value
 library(terra)
 
-blwh_percentiles <- unname(quantile(filter(bwkr_bymonth, monthnum == "6" | monthnum == "7" | monthnum == "8")$blwh, 
+blwh_percentiles <- unname(quantile(filter(bwkr_bymonth, month == "6" | month == "7" | month == "8")$blwh, 
                                     probs = c(0.55,0.65,0.75,0.85,0.95)))
 
 binary_fn <- function(raster,percentiles) {
@@ -226,20 +258,36 @@ binary_fn <- function(raster,percentiles) {
 blwh_jun_binary <- binary_fn(blwh_jun_count,blwh_percentiles)
 blwh_jul_binary <- binary_fn(blwh_jul_count,blwh_percentiles)
 blwh_aug_binary <- binary_fn(blwh_aug_count,blwh_percentiles)
+blwh_678_binary <- stack(blwh_jun_binary,blwh_jul_binary,blwh_aug_binary)
 
 blwh_breaks <- c((blwh_percentiles-0.01),1)
 
-plt <- levelplot(blwh_jun_binary,main = "Persistently High Blue Whale HS Pixels (June)",
-                 par.settings = myTheme, at = blwh_breaks)
+plt <- levelplot(blwh_678_binary,main = "Persistent Core Blue Whale Habitat",
+                  par.settings = myTheme, names.attr=as.character(c("June","July","August")), at = blwh_breaks)
 plt + latticeExtra::layer(sp.polygons(world_land, fill="gray80"))
 
-plt <- levelplot(blwh_jul_binary,main = "Persistently High Blue Whale HS Pixels (July)",
-                 par.settings = myTheme, at = blwh_breaks)
-plt + latticeExtra::layer(sp.polygons(world_land, fill="gray80"))
+# Function to count pixels of persistent core habitat above each threshold
 
-plt <- levelplot(blwh_aug_binary,main = "Persistently High Blue Whale HS Pixels (August)",
-                 par.settings = myTheme, at = blwh_breaks)
-plt + latticeExtra::layer(sp.polygons(world_land, fill="gray80"))
+count_fn <- function(raster) {
+  raster_binary <- as(raster, "SpatRaster")
+  raster_binary <- app(raster_binary, fun=function(x){ x[x <= 50] <- NA; return(x)})
+  raster_binary <- app(raster_binary, fun=function(x){ x[x > 50] <- 1; return(x)})
+  
+  count <- matrix(NA,1,5)
+  for (i in 1:5) {
+    raster_binary_layer <- raster(raster_binary[[i]])
+    cnt <- data.frame(rasterToPoints(raster_binary_layer)) %>%
+      summarize(count=n())
+    count[i] <- unlist(cnt)
+  }
+  output <- data.frame(count)
+}
+
+blwh_jun_CHcount <- count_fn(blwh_jun_count)
+blwh_jul_CHcount <- count_fn(blwh_jul_count)
+blwh_aug_CHcount <- count_fn(blwh_aug_count)
+
+# Finish plotting lines for each threshold
 
 # Overlap Metrics Code ----------------------------------------------------
 
@@ -305,10 +353,10 @@ for (i in 1:3) { # blwh_tresh
     y <- 11 + j # Column of krill_core desired
     AO_plot <- bwkr_metrics_9combo[c(1:6,8,x,y,15)] %>%
       rename("blwh_core"=paste0(blwh_cores[[i]]),"krill_core"=paste0(krill_cores[[j]])) %>%
-      group_by(year,monthnum) %>% # organize by date
+      group_by(year,month) %>% # organize by date
       summarise(AO=area_overlapfn(prey=krill_core,pred=blwh_core,area=Area)) %>% 
       pivot_longer(cols=c(AO),names_to="Metric_Name",values_to="Overlap_Metric")
-    boxplot(Overlap_Metric~monthnum,
+    boxplot(Overlap_Metric~month,
             data=AO_plot,
             xlab="Month",
             ylab="Area Overlap",
@@ -325,10 +373,10 @@ for (i in 1:3) { # blwh_tresh
     y <- 11 + j # Column of krill_core desired
     RO_plot <- bwkr_metrics_9combo[c(1:6,8,x,y,15)] %>%
       rename("blwh_core"=paste0(blwh_cores[[i]]),"krill_core"=paste0(krill_cores[[j]])) %>%
-      group_by(year,monthnum) %>% # organize by date
+      group_by(year,month) %>% # organize by date
       summarise(RO=range_overlapfn(prey=krill_core,pred=blwh_core,area=Area)) %>% 
       pivot_longer(cols=c(RO),names_to="Metric_Name",values_to="Overlap_Metric")
-    boxplot(Overlap_Metric~monthnum,
+    boxplot(Overlap_Metric~month,
             data=RO_plot,
             xlab="Month",
             ylab="Range Overlap",
@@ -339,7 +387,34 @@ for (i in 1:3) { # blwh_tresh
 
 dev.off()
 
-# Metrics for thresh: blwh 0.28 + krill 75% -------------------------------
+# Metrics for thresh: blwh 0.44 + krill 75% -------------------------------
+
+# Finding appropriate threshold for core habitat and filtering data
+bwkr_bymonth <- data.frame(group_by(bwkr_all,month))
+bwkr_bymonth$month <- as.character(bwkr_bymonth$month)
+
+blwh_percentiles <- unname(quantile(bwkr_all$blwh,probs = c(0.35,0.45,0.55,0.65,0.75,0.85,0.95)))
+krill_percentiles <- unname(quantile(bwkr_all$krill,probs = c(0.35,0.45,0.55,0.65,0.75,0.85,0.95)))
+blwh_jun_percentiles <- unname(quantile(filter(bwkr_bymonth,month == 6)$blwh,probs = c(0.35,0.45,0.55,0.65,0.75,0.85,0.95)))
+blwh_jul_percentiles <- unname(quantile(filter(bwkr_bymonth,month == 7)$blwh,probs = c(0.35,0.45,0.55,0.65,0.75,0.85,0.95)))
+blwh_aug_percentiles <- unname(quantile(filter(bwkr_bymonth,month == 8)$blwh,probs = c(0.35,0.45,0.55,0.65,0.75,0.85,0.95)))
+blwh_678_percentiles <- unname(quantile(filter(bwkr_bymonth,month == 6 | month == 7 | month == 8)$blwh,
+                                        probs = c(0.35,0.45,0.55,0.65,0.75,0.85,0.95)))
+
+plot(x=c(0.35,0.45,0.55,0.65,0.75,0.85,0.95),y=blwh_percentiles,main="Blwh HS vs Percentile",
+     xlab="Percentile", ylab="Blwh HS", ylim=c(0,1),xlim=c(0.3,1))
+lines(x=c(0.35,0.45,0.55,0.65,0.75,0.85,0.95),y=blwh_jun_percentiles,col="red")
+lines(x=c(0.35,0.45,0.55,0.65,0.75,0.85,0.95),y=blwh_jul_percentiles,col="orange")
+lines(x=c(0.35,0.45,0.55,0.65,0.75,0.85,0.95),y=blwh_aug_percentiles,col="green")
+lines(x=c(0.35,0.45,0.55,0.65,0.75,0.85,0.95),y=blwh_678_percentiles,col="blue")
+legend(0.3, 0.95, legend=c("All Months", "June", "July","August","Jun/Jul/Aug"),
+       col=c("black","red","orange","green","blue"),lty=1:2, cex=0.8)
+
+plot(x=c(0.35,0.45,0.55,0.65,0.75,0.85,0.95),y=blwh_percentiles)
+point(x=c(0.35,0.45,0.55,0.65,0.75,0.85,0.95),y=blwh_jun_percentiles)
+point(x=c(0.35,0.45,0.55,0.65,0.75,0.85,0.95),y=blwh_jul_percentiles)
+point(x=c(0.35,0.45,0.55,0.65,0.75,0.85,0.95),y=blwh_aug_percentiles)
+point(x=c(0.35,0.45,0.55,0.65,0.75,0.85,0.95),y=blwh_678_percentiles)
 
 # Matching krill threshold to % blwh above 0.28 threshold and calculating metrics
 blwh_028 <- filter(bwkr_all,bwkr_all$blwh>0.28) # 23% of data
@@ -407,3 +482,7 @@ ggplot(Bhatty_all,aes(x=month,y=Overlap_Metric,group=month)) +
   ggtitle("Bhattacharyya's Coefficient grouped by month") +
   xlab("Month (March-July)") + 
   ylab("Bhattacharyya's Coefficient")
+
+
+# Other -------------------------------------------------------------------
+
