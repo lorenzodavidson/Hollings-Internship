@@ -41,8 +41,8 @@ lat <- ncvar_get(totalkrill, "Latitude", verbose = F)
 tt <- ncvar_get(totalkrill, "Time")
 dates <- as.Date(as.POSIXct(tt, tz = "GMT", origin = "1970-01-01"))
 years <- year(dates)
-months <- month.abb[as.numeric(month(dates))]
-monthnums <- as.numeric(month(dates))
+months <- as.numeric(month(dates))
+monthabs <- month.abb[as.numeric(month(dates))]
 dates <- format(dates,"%Y-%m")
 TotalKrill_CPUE <- ncvar_get(totalkrill, "TotalKrill_CPUE")
 
@@ -102,13 +102,13 @@ bwkr_all_xyz <- data.frame(bwkr_monthly_xyz[[1]])
 bwkr_all_xyz$date <- dates[[1]]
 bwkr_all_xyz$year <- years[[1]]
 bwkr_all_xyz$month <- months[[1]]
-bwkr_all_xyz$monthnum <- monthnums[[1]]
+bwkr_all_xyz$monthabs <- monthabs[[1]]
 for (i in 2:155) {
   bwkr_add <- bwkr_monthly_xyz[[i]]
   bwkr_add$date <- dates[[i]]
   bwkr_add$year <- years[[i]]
   bwkr_add$month <- months[[i]]
-  bwkr_add$monthnum <- monthnums[[i]]
+  bwkr_add$monthabs <- monthabs[[i]]
   bwkr_all_xyz <- rbind(bwkr_all_xyz, bwkr_add)
 }
 
@@ -129,47 +129,14 @@ for (t in seq_along(dates)) {
     krill_all_raster <- stack(krill_all_raster, krill_raster)  
   }
 }
-blwh_all_raster <- setZ(blwh_all_raster, dates)
-krill_all_raster <- setZ(krill_all_raster, dates)
-
-# Monthly raster stacks (31 layers each)
-blwh_apr_raster <- stack(); krill_apr_raster <- stack()
-blwh_may_raster <- stack(); krill_may_raster <- stack()
-blwh_jun_raster <- stack(); krill_jun_raster <- stack()
-blwh_jul_raster <- stack(); krill_jul_raster <- stack()
-blwh_aug_raster <- stack(); krill_aug_raster <- stack()
-
-apr <- seq(1,151,by=5); may <- seq(2,152,by=5); jun <- seq(3,153,by=5)
-jul <- seq(4,154,by=5); aug <- seq(5,155,by=5)
-
-blwh_apr_raster <- subset(blwh_all_raster, apr)
-krill_apr_raster <- subset(krill_all_raster, apr)
-blwh_may_raster <- subset(blwh_all_raster, may)
-krill_may_raster <- subset(krill_all_raster, may)
-blwh_jun_raster <- subset(blwh_all_raster, jun)
-krill_jun_raster <- subset(krill_all_raster, jun)
-blwh_jul_raster <- subset(blwh_all_raster, jul)
-krill_jul_raster <- subset(krill_all_raster, jul)
-blwh_aug_raster <- subset(blwh_all_raster, aug)
-krill_aug_raster <- subset(krill_all_raster, aug)
-
 
 # Save bwkr_all, blwh_all_raster, krill_all_raster, and monthly  --------
 
 processed_path <- "~/Desktop/Hollingsinternship/Hollings-Internship/Processed/"
 
+write.csv(dates,paste0(processed_path,"dates.csv"),row.names = FALSE)
 write.csv(bwkr_all_xyz,paste0(processed_path,"bwkr_all.csv"),row.names = FALSE) # bwkr_all
-writeRaster(blwh_all_raster,paste0(processed_path,"blwh_all_raster.grd"),format = "raster")
-writeRaster(krill_all_raster,paste0(processed_path,"krill_all_raster.grd"),format = "raster")
-
-# Monthly
-writeRaster(blwh_apr_raster,paste0(processed_path,"blwh_apr_raster.grd"),format = "raster")
-writeRaster(krill_apr_raster,paste0(processed_path,"krill_apr_raster.grd"),format = "raster")
-writeRaster(blwh_may_raster,paste0(processed_path,"blwh_may_raster.grd"),format = "raster")
-writeRaster(krill_may_raster,paste0(processed_path,"krill_may_raster.grd"),format = "raster")
-writeRaster(blwh_jun_raster,paste0(processed_path,"blwh_jun_raster.grd"),format = "raster")
-writeRaster(krill_jun_raster,paste0(processed_path,"krill_jun_raster.grd"),format = "raster")
-writeRaster(blwh_jul_raster,paste0(processed_path,"blwh_jul_raster.grd"),format = "raster")
-writeRaster(krill_jul_raster,paste0(processed_path,"krill_jul_raster.grd"),format = "raster")
-writeRaster(blwh_aug_raster,paste0(processed_path,"blwh_aug_raster.grd"),format = "raster")
-writeRaster(krill_aug_raster,paste0(processed_path,"krill_aug_raster.grd"),format = "raster")
+writeRaster(blwh_all_raster,paste0(processed_path,"blwh_all/","blwh.grd"),
+            format = "raster",bylayer=TRUE,suffix=dates)
+writeRaster(krill_all_raster,paste0(processed_path,"krill_all/","krill.grd"),
+            format = "raster",bylayer=TRUE,suffix=dates)
