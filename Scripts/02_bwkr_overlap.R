@@ -35,7 +35,7 @@ suppressPackageStartupMessages(suppressWarnings({
 
 processed_path <- "~/Desktop/Hollingsinternship/Hollings-Internship/Processed/"
 bwkr_all <- read.csv(paste0(processed_path,"/bwkr_all.csv"))
-dates <- read.csv(paste0(processed_path,"/dates.csv"))
+dates <- t(read.csv(paste0(processed_path,"/dates.csv")))
 
 # Created stacked rasters for complete set
 
@@ -137,7 +137,7 @@ blwh_breaks <- c(0, blwh_breaks)
 krill_breaks <- unname(quantile(bwkr_all$krill,probs = c(0.35,0.45,0.55,0.65,0.75,0.85,0.95,1)))
 krill_breaks <- c(0,krill_breaks)
 
-myTheme <- rasterTheme(region = brewer.pal(9,"YlOrRd"),panel.background = list(col = 'grey95'))
+myTheme <- rasterTheme(region = brewer.pal(9,"YlOrRd"),panel.background = list(col = 'lightblue'))
 
 # Blue Whale
 plt <- levelplot(blwh_all_mean,main = "Mean Monthly Blue Whale HS",par.settings = myTheme,at = blwh_breaks)
@@ -163,6 +163,8 @@ blwh_breaks <- c(0, blwh_breaks)
 krill_breaks <- unname(quantile(filter(bwkr_bymonth, month == "6" | month == "7" | month == "8")$krill, 
                                 probs = c(0.35,0.45,0.55,0.65,0.75,0.85,0.95,1)))
 krill_breaks <- c(0,krill_breaks)
+
+myTheme <- rasterTheme(region = brewer.pal(9,"YlOrRd"),panel.background = list(col = 'lightblue'))
 
 library(gridExtra)
 p1 <- levelplot(blwh_678_mean,main = "Mean Monthly Blue Whale HS",par.settings = myTheme,at = blwh_breaks) + 
@@ -410,79 +412,219 @@ lines(x=c(0.35,0.45,0.55,0.65,0.75,0.85,0.95),y=blwh_678_percentiles,col="blue")
 legend(0.3, 0.95, legend=c("All Months", "June", "July","August","Jun/Jul/Aug"),
        col=c("black","red","orange","green","blue"),lty=1:2, cex=0.8)
 
-plot(x=c(0.35,0.45,0.55,0.65,0.75,0.85,0.95),y=blwh_percentiles)
-point(x=c(0.35,0.45,0.55,0.65,0.75,0.85,0.95),y=blwh_jun_percentiles)
-point(x=c(0.35,0.45,0.55,0.65,0.75,0.85,0.95),y=blwh_jul_percentiles)
-point(x=c(0.35,0.45,0.55,0.65,0.75,0.85,0.95),y=blwh_aug_percentiles)
-point(x=c(0.35,0.45,0.55,0.65,0.75,0.85,0.95),y=blwh_678_percentiles)
 
 # Matching krill threshold to % blwh above 0.28 threshold and calculating metrics
-blwh_028 <- filter(bwkr_all,bwkr_all$blwh>0.28) # 23% of data
+blwh_044 <- filter(bwkr_all,bwkr_all$blwh>0.44) # top ~75th percentile of all data, top 60th Jun/Jul/Aug
 krill_75p_thresh <- unname(quantile(bwkr_all$krill, 0.75))
 krill_75p <- filter(bwkr_all,bwkr_all$krill>krill_75p_thresh) 
 
+# For some reason not working anymore ---
 bwkr_metrics <- bwkr_all %>% # make new dataframe called dailyzoom2015 which is a copy of sdm2015 and do the following below
-  mutate(blwh_core = ifelse(blwh >= 0.28,1,0), krill_core = ifelse(krill >= krill_75p_thresh,1,0), Area=1) %>% # create a binary data column for range and area overlap of each species
-  group_by(date,year,month) %>% # organize by date
+  mutate(blwh_core = ifelse(blwh >= 0.44,1,0), krill_core = ifelse(krill >= krill_75p_thresh,1,0), Area=1) %>% # create a binary data column for range and area overlap of each species
+  group_by(year,month) %>% # organize by date
   summarise(AO=area_overlapfn(prey=krill_core,pred=blwh_core,area=Area),
             RO=range_overlapfn(prey=krill_core,pred=blwh_core,area=Area),
             Schoener=schoeners_overlapfn(prey=krill,pred=blwh),
-            Bhatty=bhatta_coeffn(prey=krill,pred=blwh)) %>% 
-  pivot_longer(cols=c(AO,RO,Schoener,Bhatty),names_to="Metric_Name",values_to="Overlap_Metric") # change the dataframe into long format for easier plotting
+            Bhatty=bhatta_coeffn(prey=krill,pred=blwh))
+pivot_longer(cols=c(AO,RO,Schoener,Bhatty),names_to="Metric_Name",values_to="Overlap_Metric") # change the dataframe into long format for easier plotting
+# ---
 
-AO_all <- filter(bwkr_metrics,Metric_Name=="AO")
-RO_all <- filter(bwkr_metrics,Metric_Name=="RO")
-Schoener_all <- filter(bwkr_metrics,Metric_Name=="Schoener")
-Bhatty_all <- filter(bwkr_metrics,Metric_Name=="Bhatty")
+processed_path <- "~/Desktop/Hollingsinternship/Hollings-Internship/Processed/"
+dates <- t(read.csv(paste0(processed_path,"/dates.csv")))
+
+bwkr_core <- bwkr_all %>% 
+  mutate(blwh_core = ifelse(blwh >= 0.44,1,0), krill_core = ifelse(krill >= krill_75p_thresh,1,0), Area=1)
+for (i in 1:155) {
+  time <- dates[i]
+  if (i == 1) {
+    bwkr_metrics <- filter(bwkr_core,date==time) %>%
+      summarize(AO=area_overlapfn(prey=krill_core,pred=blwh_core,area=Area),
+                RO=range_overlapfn(prey=krill_core,pred=blwh_core,area=Area),
+                Schoener=schoeners_overlapfn(prey=krill,pred=blwh),
+                Bhatty=bhatta_coeffn(prey=krill,pred=blwh))
+  } else {
+    metrics <- filter(bwkr_core,date==time) %>%
+      summarize(AO=area_overlapfn(prey=krill_core,pred=blwh_core,area=Area),
+                RO=range_overlapfn(prey=krill_core,pred=blwh_core,area=Area),
+                Schoener=schoeners_overlapfn(prey=krill,pred=blwh),
+                Bhatty=bhatta_coeffn(prey=krill,pred=blwh))
+    bwkr_metrics <- rbind(bwkr_metrics,metrics)
+  }
+}
+bwkr_metrics <- cbind(t(dates),bwkr_metrics)
+bwkr_metrics <- bwkr_metrics %>%
+  separate(x,c('year','month'))
+bwkr_metrics <- cbind(t(dates),bwkr_metrics)
+colnames(bwkr_metrics)[1] <- "date"
 
 # AO Plots
-ggplot(AO_all,aes(x=date,y=Overlap_Metric,group = 1)) +
+ggplot(bwkr_metrics,aes(x=date,y=AO,group = 1)) +
   geom_point() + 
   geom_line() +
   ggtitle("AO 1990-2020") +
   ylab("Area Overlap")
-ggplot(AO_all,aes(x=month,y=Overlap_Metric,group=month)) +
+ggplot(bwkr_metrics,aes(x=month,y=AO)) +
   geom_boxplot() +
   ggtitle("AO grouped by month") +
   xlab("Month (March-July)") + 
   ylab("Area Overlap")
 
 # RO Plots
-ggplot(RO_all,aes(x=date,y=Overlap_Metric,group = 1)) +
+ggplot(bwkr_metrics,aes(x=date,y=RO,group = 1)) +
   geom_point() + 
   geom_line() +
   ggtitle("RO 1990-2020") +
   ylab("Range Overlap")
-ggplot(RO_all,aes(x=month,y=Overlap_Metric,group=month)) +
+ggplot(bwkr_metrics,aes(x=month,y=RO)) +
   geom_boxplot() +
   ggtitle("RO grouped by month") +
   xlab("Month (March-July)") + 
   ylab("Range Overlap")
 
 # Schoener Plots
-ggplot(Schoener_all,aes(x=date,y=Overlap_Metric,group = 1)) +
+ggplot(bwkr_metrics,aes(x=date,y=Schoener,group = 1)) +
   geom_point() + 
   geom_line() +
   ggtitle("Schoener's D 1990-2020") +
   ylab("Schoener's D")
-ggplot(Schoener_all,aes(x=month,y=Overlap_Metric,group=month)) +
+ggplot(bwkr_metrics,aes(x=month,y=Schoener,group=month)) +
   geom_boxplot() +
   ggtitle("Schoener's D grouped by month") +
   xlab("Month (March-July)") + 
   ylab("Schoener's D")
 
 # Bhattacharyya Plots
-ggplot(Bhatty_all,aes(x=date,y=Overlap_Metric,group = 1)) +
+ggplot(bwkr_metrics,aes(x=date,y=Bhatty,group = 1)) +
   geom_point() + 
   geom_line() +
   ggtitle("Bhattacharyya's Coefficient 1990-2020") +
   ylab("Bhattacharyya's Coefficient")
-ggplot(Bhatty_all,aes(x=month,y=Overlap_Metric,group=month)) +
+ggplot(bwkr_metrics,aes(x=month,y=Bhatty,group=month)) +
   geom_boxplot() +
   ggtitle("Bhattacharyya's Coefficient grouped by month") +
   xlab("Month (March-July)") + 
   ylab("Bhattacharyya's Coefficient")
 
 
-# Other -------------------------------------------------------------------
+# Visualizing blue whale and krill core habitat overlap -------------------
+
+# Check for months with core habitat overlap
+blwh_core <- bwkr_all %>%
+  mutate(blwh_core = ifelse(blwh >= 0.44,1,0), krill_core = ifelse(krill >= krill_75p_thresh,1,0), Area=1) %>%
+  filter(blwh_core == 1)
+
+krill_core <- bwkr_all %>%
+  mutate(blwh_core = ifelse(blwh >= 0.44,1,0), krill_core = ifelse(krill >= krill_75p_thresh,1,0), Area=1) %>%
+  filter(krill_core == 1)
+
+bwkr_core_overlap <- bwkr_all %>%
+  mutate(blwh_core = ifelse(blwh >= 0.44,1,0), krill_core = ifelse(krill >= krill_75p_thresh,1,0), Area=1) %>%
+  filter(blwh_core == 1 & krill_core == 1)
+
+ggplot(bwkr_core_overlap, aes(x=month)) + 
+  geom_histogram(binwidth=1) # Essentially only July and August
+
+bwkr_core_overlap <- filter(bwkr_core_overlap, month == "7" | month == "8" )
+dates_overlap <- unique(bwkr_core_overlap$date)
+
+# Subset raster stack to jul/aug
+dates_overlap_index <- data.frame(matrix(NA,1,62)) # Indexes of dates with overlap present
+for (i in 1:62) {
+  match <- grep(dates_overlap[i], dates, value = FALSE)
+  if (length(match)==0) next
+  dates_overlap_index[i] <- match
+}
+
+krill_julaug_raster <- subset(krill_all_raster,dates_overlap_index)
+blwh_julaug_raster <- subset(blwh_all_raster,dates_overlap_index)
+
+# Function to create categorical raster with krill, blwh and blwh+krill
+library(terra)
+overlap_binary_fn <- function(raster1,raster2,threshold1, threshold2) {
+  
+  # Using terra Spatraster to compute functions
+  krill_binary <- as(raster1, "SpatRaster")
+  krill_binary <- app(krill_binary, fun=function(x){ x[x < threshold1] <- NA; return(x)})
+  krill_binary <- app(krill_binary, fun=function(x){ x[x >= threshold1] <- 1; return(x)})
+  
+  blwh_binary <- as(raster2, "SpatRaster")
+  blwh_binary <- app(blwh_binary, fun=function(x){ x[x < threshold2] <- NA; return(x)})
+  blwh_binary <- app(blwh_binary, fun=function(x){ x[x >= threshold2] <- 2; return(x)})
+  
+  bwkr_binary <- mask(krill_binary,blwh_binary)
+  bwkr_binary <- app(bwkr_binary, fun=function(x){ x[x == 1] <- 3; return(x)})
+  
+  # Returning to raster
+  krill_binary <- raster(krill_binary)
+  blwh_binary <- raster(blwh_binary)
+  bwkr_binary <- raster(bwkr_binary)
+  
+  output <- cover(bwkr_binary,krill_binary)
+  output <- cover(output,blwh_binary)
+  
+  # Create categorical raster with 3 (or 2) classes
+  output <- ratify(output)
+  ratified <- levels(output)[[1]]
+  if (length(ratified$ID) == 2) {
+    ratified$CS <- c('blwh', 'krill + blwh')
+  } else {
+    ratified$CS <- c('krill', 'blwh', 'krill + blwh')
+  }
+  
+  levels(output) <- ratified
+  output <- output
+  
+}
+
+# Create rasters and pngs for Jul/Aug monthly means and individual months
+
+bwkr_julmean_raster <- overlap_binary_fn(krill_jul_mean,blwh_jul_mean,threshold1=krill_75p_thresh, threshold2=0.44)
+bwkr_augmean_raster <- overlap_binary_fn(krill_aug_mean,blwh_aug_mean,threshold1=krill_75p_thresh, threshold2=0.44)
+
+getwd()
+png(file = paste0("core_overlap_julmean.png"), width=1800, height=1800, res=300)
+myTheme <- rasterTheme(panel.background = list(col = 'lightblue'))
+plt <- levelplot(bwkr_julmean_raster,col.regions=c('palegreen', 'midnightblue', 'indianred1'),
+                 par.settings = myTheme, main = "July Mean") + 
+  latticeExtra::layer(sp.polygons(world_land, fill="gray80"))
+plot(plt) 
+dev.off()
+
+getwd()
+png(file = paste0("core_overlap_augmean.png"), width=1800, height=1800, res=300)
+myTheme <- rasterTheme(panel.background = list(col = 'lightblue'))
+plt <- levelplot(bwkr_augmean_raster,col.regions=c('palegreen', 'midnightblue', 'indianred1'),
+                 par.settings = myTheme, main = "August Mean") + 
+  latticeExtra::layer(sp.polygons(world_land, fill="gray80"))
+plot(plt) 
+dev.off()
+
+bwkr_overlap_raster <- stack()
+for (i in 1:62) {
+  a <- overlap_binary_fn(krill_julaug_raster[[i]],blwh_julaug_raster[[i]],threshold1=krill_75p_thresh, threshold2=0.44)
+  bwkr_overlap_raster <- stack(bwkr_overlap_raster,a)
+}
+
+for (i in seq_along(dates_overlap)) {
+  getwd()
+  png(file = paste0("core_overlap_",dates_overlap[i],".png"), width=1800, height=1800, res=300)
+  myTheme <- rasterTheme(panel.background = list(col = 'lightblue'))
+  plt <- levelplot(bwkr_overlap_raster[[i]],col.regions=c('palegreen', 'midnightblue', 'indianred1'),
+                   par.settings = myTheme, main = paste0(dates_overlap[i])) + 
+    latticeExtra::layer(sp.polygons(world_land, fill="gray80"))
+  plot(plt) 
+  dev.off()
+}
+
+# Counting pixels of overlap
+
+bwkr_julaug_count <- bwkr_core_overlap %>%
+  group_by(year,month) %>%
+  summarize(count = n())
+bwkr_julaug_count$month[bwkr_julaug_count$month == 7] <- "July"
+bwkr_julaug_count$month[bwkr_julaug_count$month == 8] <- "August"
+
+ggplot(bwkr_julaug_count,aes(x=year,y=count,color=month)) +
+  geom_line() +
+  ggtitle("Pixels of Krill and Blue Whale Core Habitat Overlap")
 
