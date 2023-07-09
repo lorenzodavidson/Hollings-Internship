@@ -35,24 +35,13 @@ for (i in dfnames) {
 
 # Open krill netCDF file into xyz and raster format --------
 
-totalkrill <- nc_open("~/Dropbox/krill_raw/TotalKril_CPUE.nc", write = TRUE)
-lon <- ncvar_get(totalkrill, "Longitude")
-lat <- ncvar_get(totalkrill, "Latitude", verbose = F)
-tt <- ncvar_get(totalkrill, "Time")
-dates <- as.Date(as.POSIXct(tt, tz = "GMT", origin = "1970-01-01"))
-years <- year(dates)
-months <- as.numeric(month(dates))
-monthabs <- month.abb[as.numeric(month(dates))]
-dates <- format(dates,"%Y-%m")
-TotalKrill_CPUE <- ncvar_get(totalkrill, "TotalKrill_CPUE")
-
 # Function to create raster from netCDF
 create_ROMS_RASTER=function(nc,dname,month_nc,template){ #nc file, name of variable, month of interest, template raster
   nc.data=nc_open(nc)
   lat <- ncvar_get(nc.data,'Latitude')
   lon <- ncvar_get(nc.data,'Longitude')
   nrows <- length(lat); ncols <- length(lon)
-  tt <- ncvar_get(totalkrill, "Time")
+  tt <- ncvar_get(nc.data, "Time")
   dates <- format(as.Date(as.POSIXct(tt, tz = "GMT", origin = "1970-01-01")),"%Y-%m")
   tmp.array <- ncvar_get(nc.data, dname)
   fillvalue <- ncatt_get(nc.data, dname, "_FillValue")
@@ -76,11 +65,19 @@ create_ROMS_RASTER=function(nc,dname,month_nc,template){ #nc file, name of varia
   r <- raster::resample(r, template, method="bilinear")
 }
 
-# krill monthly rasters and xyz datasets
+# Total krill
+totalkrill <- nc_open("~/Dropbox/krill_raw/TotalKril_CPUE.nc", write = TRUE)
+lon <- ncvar_get(totalkrill, "Longitude"); lat <- ncvar_get(totalkrill, "Latitude", verbose = F)
+tt <- ncvar_get(totalkrill, "Time")
+dates <- as.Date(as.POSIXct(tt, tz = "GMT", origin = "1970-01-01"))
+years <- year(dates); months <- as.numeric(month(dates))
+monthabs <- month.abb[as.numeric(month(dates))]
+dates <- format(dates,"%Y-%m")
+
 nc <- "~/Dropbox/krill_raw/TotalKril_CPUE.nc"
 dname = 'TotalKrill_CPUE'
+var = "totalkrill"
 temp <- raster(ncol=185, nrow=180, xmn=-134, xmx=-115.5, ymn=30, ymx=48)
-
 krill_monthly_raster <- list()
 krill_monthly_xyz <- list()
 for (t in seq_along(dates)) {
@@ -91,25 +88,88 @@ for (t in seq_along(dates)) {
     rename("lon"="x","lat"="y","krill"="layer")
 }
 
+# EPAC
+epackrill <- nc_open("~/Dropbox/krill_raw/EPAC_CPUE.nc", write = TRUE)
+tt_epac <- ncvar_get(epackrill, "Time")
+dates_epac <- as.Date(as.POSIXct(tt_epac, tz = "GMT", origin = "1970-01-01"))
+years_epac <- year(dates_epac); months_epac <- as.numeric(month(dates_epac))
+monthabs_epac <- month.abb[as.numeric(month(dates_epac))]
+dates_epac <- format(dates_epac,"%Y-%m")
+
+nc <- "~/Dropbox/krill_raw/EPAC_CPUE.nc"
+dname = 'EPAC_CPUE'
+temp <- raster(ncol=185, nrow=180, xmn=-134, xmx=-115.5, ymn=30, ymx=48)
+epac_monthly_raster <- list()
+epac_monthly_xyz <- list()
+for (t in seq_along(dates_epac)) {
+  month_nc <- dates_epac[[t]]
+  epac_monthly_raster[[t]] <- create_ROMS_RASTER(nc,dname,month_nc,temp)
+  
+  epac_monthly_xyz[[t]] <- data.frame(na.omit(rasterToPoints(epac_monthly_raster[[t]]))) %>%
+    rename("lon"="x","lat"="y","epac"="layer")
+}
+
+# TSPIN
+tspinrill <- nc_open("~/Dropbox/krill_raw/TSPIN_CPUE.nc", write = TRUE)
+tt_tspin <- ncvar_get(tspinrill, "Time")
+dates_tspin <- as.Date(as.POSIXct(tt_tspin, tz = "GMT", origin = "1970-01-01"))
+years_tspin <- year(dates_tspin); months_tspin <- as.numeric(month(dates_tspin))
+monthabs_tspin <- month.abb[as.numeric(month(dates_tspin))]
+dates_tspin <- format(dates_tspin,"%Y-%m")
+
+nc <- "~/Dropbox/krill_raw/TSPIN_CPUE.nc"
+dname = 'TSPIN_CPUE'
+temp <- raster(ncol=185, nrow=180, xmn=-134, xmx=-115.5, ymn=30, ymx=48)
+tspin_monthly_raster <- list()
+tspin_monthly_xyz <- list()
+for (t in seq_along(dates_tspin)) {
+  month_nc <- dates_tspin[[t]]
+  tspin_monthly_raster[[t]] <- create_ROMS_RASTER(nc,dname,month_nc,temp)
+  
+  tspin_monthly_xyz[[t]] <- data.frame(na.omit(rasterToPoints(tspin_monthly_raster[[t]]))) %>%
+    rename("lon"="x","lat"="y","tspin"="layer")
+}
+
 # Creating bwkr_monthly_xyz and bwkr_all datasets --------------------------
 
 bwkr_monthly_xyz <- list()
 for (t in seq_along(dates)) {
-  bwkr_monthly_xyz[[t]] <- inner_join(blwh_monthly_xyz[[t]],krill_monthly_xyz[[t]])
+  if (t <= 60) {
+    bwkr_monthly_xyz[[t]] <- inner_join(blwh_monthly_xyz[[t]],krill_monthly_xyz[[t]])
+  } else {
+    x <- t-60
+    bwkr_monthly_xyz[[t]] <- inner_join(blwh_monthly_xyz[[t]],krill_monthly_xyz[[t]])
+    bwkr_monthly_xyz[[t]] <- left_join(bwkr_monthly_xyz[[t]],epac_monthly_xyz[[x]])
+    bwkr_monthly_xyz[[t]] <- left_join(bwkr_monthly_xyz[[t]],tspin_monthly_xyz[[x]])
+  }
 }
 
+# Includes epac and tspin
 bwkr_all_xyz <- data.frame(bwkr_monthly_xyz[[1]])
+bwkr_all_xyz$epac <- NA
+bwkr_all_xyz$tspin <- NA
 bwkr_all_xyz$date <- dates[[1]]
 bwkr_all_xyz$year <- years[[1]]
 bwkr_all_xyz$month <- months[[1]]
 bwkr_all_xyz$monthabs <- monthabs[[1]]
 for (i in 2:155) {
-  bwkr_add <- bwkr_monthly_xyz[[i]]
-  bwkr_add$date <- dates[[i]]
-  bwkr_add$year <- years[[i]]
-  bwkr_add$month <- months[[i]]
-  bwkr_add$monthabs <- monthabs[[i]]
-  bwkr_all_xyz <- rbind(bwkr_all_xyz, bwkr_add)
+  if (i <= 60) {
+    bwkr_add <- bwkr_monthly_xyz[[i]]
+    bwkr_add$epac <- NA
+    bwkr_add$tspin <- NA
+    bwkr_add$date <- dates[[i]]
+    bwkr_add$year <- years[[i]]
+    bwkr_add$month <- months[[i]]
+    bwkr_add$monthabs <- monthabs[[i]]
+    bwkr_all_xyz <- rbind(bwkr_all_xyz, bwkr_add)
+  } else {
+    bwkr_add <- bwkr_monthly_xyz[[i]]
+    bwkr_add$date <- dates[[i]]
+    bwkr_add$year <- years[[i]]
+    bwkr_add$month <- months[[i]]
+    bwkr_add$monthabs <- monthabs[[i]]
+    bwkr_all_xyz <- rbind(bwkr_all_xyz, bwkr_add)
+  }
 }
 
 # Creating final blwh and krill raster datasets  --------------------------
@@ -117,16 +177,40 @@ ext <- extent(-127.5, -115.5, 30, 48) # Extent of bwkr raster with edges
 
 blwh_all_raster <- stack() # Stack of 155 rasters containing only bwkr shared datapoints
 krill_all_raster <- stack()
+epac_all_raster <- stack() # Stack of 95 rasters
+tspin_all_raster <- stack()
 for (t in seq_along(dates)) {
-  bwkr_rasterprep <- bwkr_monthly_xyz[[t]][,-5:-7]
+  bwkr_rasterprep <- bwkr_monthly_xyz[[t]][,-7:-10]
   if (t ==1) {
-    blwh_all_raster <- extend(rasterFromXYZ(bwkr_rasterprep[,-4]),ext)
-    krill_all_raster <- extend(rasterFromXYZ(bwkr_rasterprep[,-3]),ext)
+    blwh_all_raster <- extend(rasterFromXYZ(bwkr_rasterprep[c(-4:-6)]),ext)
+    krill_all_raster <- extend(rasterFromXYZ(bwkr_rasterprep[c(-3,-5,-6)]),ext)
   } else {
-    blwh_raster <- extend(rasterFromXYZ(bwkr_rasterprep[,-4]),ext)
-    krill_raster <- extend(rasterFromXYZ(bwkr_rasterprep[,-3]),ext)
-    blwh_all_raster <- stack(blwh_all_raster, blwh_raster)
-    krill_all_raster <- stack(krill_all_raster, krill_raster)  
+    if (t <= 60) {
+      blwh_raster <- extend(rasterFromXYZ(bwkr_rasterprep[,-4]),ext)
+      krill_raster <- extend(rasterFromXYZ(bwkr_rasterprep[,-3]),ext)
+      blwh_all_raster <- stack(blwh_all_raster, blwh_raster)
+      krill_all_raster <- stack(krill_all_raster, krill_raster) 
+    } else {
+      if (t == 61) {
+        blwh_raster <- extend(rasterFromXYZ(bwkr_rasterprep[c(-4:-6)]),ext)
+        krill_raster <- extend(rasterFromXYZ(bwkr_rasterprep[c(-3,-5:-6)]),ext)
+        blwh_all_raster <- stack(blwh_all_raster, blwh_raster)
+        krill_all_raster <- stack(krill_all_raster, krill_raster)
+        
+        epac_all_raster <- extend(rasterFromXYZ(bwkr_rasterprep[c(-3:-4,-6)]),ext)
+        tspin_all_raster <- extend(rasterFromXYZ(bwkr_rasterprep[c(-3:-5)]),ext)
+      } else {
+        blwh_raster <- extend(rasterFromXYZ(bwkr_rasterprep[c(-4:-6)]),ext)
+        krill_raster <- extend(rasterFromXYZ(bwkr_rasterprep[c(-3,-5:-6)]),ext)
+        epac_raster <- extend(rasterFromXYZ(bwkr_rasterprep[c(-3:-4,-6)]),ext)
+        tspin_raster <- extend(rasterFromXYZ(bwkr_rasterprep[c(-3:-5)]),ext)
+        
+        blwh_all_raster <- stack(blwh_all_raster, blwh_raster)
+        krill_all_raster <- stack(krill_all_raster, krill_raster)
+        epac_all_raster <- stack(epac_all_raster, epac_raster)
+        tspin_all_raster <- stack(tspin_all_raster, tspin_raster)
+      }
+    }
   }
 }
 
@@ -140,3 +224,7 @@ writeRaster(blwh_all_raster,paste0(processed_path,"blwh_all/","blwh.grd"),
             format = "raster",bylayer=TRUE,suffix=dates)
 writeRaster(krill_all_raster,paste0(processed_path,"krill_all/","krill.grd"),
             format = "raster",bylayer=TRUE,suffix=dates)
+writeRaster(epac_all_raster,paste0(processed_path,"epac_all/","epac.grd"),
+            format = "raster",bylayer=TRUE,suffix=dates_epac)
+writeRaster(tspin_all_raster,paste0(processed_path,"tspin_all/","tspin.grd"),
+            format = "raster",bylayer=TRUE,suffix=dates_tspin)
